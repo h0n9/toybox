@@ -1,4 +1,4 @@
-module github.com/h0n9/restarter
+module github.com/h0n9/toybox
 
 go 1.17
 
