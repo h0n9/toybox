@@ -34,4 +34,24 @@ func main() {
 		time.Sleep(RESTART_INTERVAL * time.Second)
 		fmt.Println("    restarted:", true)
 	}
+
+	ss, err := client.GetStatefulSet("")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("statefulset:")
+	for _, s := range ss {
+		fmt.Println("  - name:", s.Name)
+		fmt.Println("    namespace:", s.Namespace)
+		fmt.Println("    restarting:", true)
+		_, err = client.RestartStatefulSet(&s)
+		if err != nil {
+			fmt.Println("    restarted:", false)
+			fmt.Println("    error:", err)
+			continue
+		}
+		time.Sleep(RESTART_INTERVAL * time.Second)
+		fmt.Println("    restarted:", true)
+	}
 }
