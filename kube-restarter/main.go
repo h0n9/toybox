@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"path"
 	"time"
+
+	"k8s.io/client-go/util/homedir"
 )
 
 const (
@@ -10,7 +13,8 @@ const (
 )
 
 func main() {
-	client, err := NewClient("/Users/h0n9/.kube/config")
+	kubeconfig := path.Join(homedir.HomeDir(), ".kube/config")
+	client, err := NewClient(kubeconfig)
 	if err != nil {
 		panic(err)
 	}
