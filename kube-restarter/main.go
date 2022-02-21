@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	RESTART_INTERVAL = 3
+	RESTART_INTERVAL = 10
 )
 
 func main() {
@@ -35,7 +35,8 @@ func main() {
 			fmt.Println("    error:", err)
 			continue
 		}
-		time.Sleep(RESTART_INTERVAL * time.Second)
+		client.WaitDeployment(&dp)
+		// time.Sleep(RESTART_INTERVAL * time.Second)
 		fmt.Println("    restarted:", true)
 	}
 
