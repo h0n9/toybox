@@ -38,7 +38,6 @@ func (c *Client) WaitDeployment(dp *appsv1.Deployment) error {
 	for !stop {
 		result := <-w.ResultChan()
 		rdp := result.Object.(*appsv1.Deployment)
-		// fmt.Println(result.Type)
 		if !(rdp.Name == dp.Name && rdp.Namespace == dp.Namespace) {
 			continue
 		}

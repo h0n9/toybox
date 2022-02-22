@@ -7,11 +7,11 @@ import (
 )
 
 func (c *Client) GetStatefulSet(namespace string) ([]appsv1.StatefulSet, error) {
-	ss, err := c.clientSet.AppsV1().StatefulSets(namespace).List(c.ctx, metav1.ListOptions{})
+	sts, err := c.clientSet.AppsV1().StatefulSets(namespace).List(c.ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
-	return ss.Items, err
+	return sts.Items, err
 }
 
 func (c *Client) RestartStatefulSet(ss *appsv1.StatefulSet) (*appsv1.StatefulSet, error) {
