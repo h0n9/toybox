@@ -9,7 +9,7 @@ require (
 	github.com/libp2p/go-libp2p-kad-dht v0.15.0
 	github.com/libp2p/go-libp2p-pubsub v0.6.1
 	github.com/libp2p/go-libp2p-quic-transport v0.16.1
-	github.com/postie-labs/go-postie-lib v0.0.0-20220227235013-99c8cd331c17
+	github.com/postie-labs/go-postie-lib v0.0.1
 )
 
 require (

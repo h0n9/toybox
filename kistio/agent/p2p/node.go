@@ -29,6 +29,12 @@ func NewNode(ctx context.Context, cfg *util.Config) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
+	if cfg.PrivKeySeed != "" {
+		privKey, err = crypto.GenPrivKeyFromSeed([]byte(cfg.PrivKeySeed))
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	node := Node{
 		ctx:     ctx,
