@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/h0n9/toybox/kistio/agent/util"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -14,9 +15,9 @@ import (
 type Node struct {
 	ctx context.Context
 
-	PrivKey *crypto.PrivKey
-	PubKey  *crypto.PubKey
-	Address crypto.Addr
+	privKey *crypto.PrivKey
+	pubKey  *crypto.PubKey
+	address crypto.Addr
 
 	host host.Host
 
@@ -31,9 +32,9 @@ func NewNode(ctx context.Context, cfg *util.Config) (*Node, error) {
 
 	node := Node{
 		ctx:     ctx,
-		PrivKey: privKey,
-		PubKey:  privKey.PubKey(),
-		Address: privKey.PubKey().Address(),
+		privKey: privKey,
+		pubKey:  privKey.PubKey(),
+		address: privKey.PubKey().Address(),
 	}
 
 	err = node.NewHost(cfg.ListenAddrs)
@@ -65,17 +66,18 @@ func (n *Node) GetPubSub() *pubsub.PubSub {
 	return n.pubSub
 }
 
-func (n *Node) Info() {
+func (n *Node) Info() string {
 	if n.host == nil {
-		return
+		return ""
 	}
 
-	fmt.Println("address:", n.Address)
-	fmt.Println("host ID:", n.host.ID().Pretty())
-	fmt.Println("host addrs:", n.host.Addrs())
-
-	fmt.Printf("./petit-chat --bootstrap %s/p2p/%s\n",
+	str := fmt.Sprintln("host ID:", n.host.ID().Pretty())
+	str += fmt.Sprintln("host addrs:", n.host.Addrs())
+	str += fmt.Sprintf("%s --bootstrap %s/p2p/%s",
+		os.Args[0],
 		n.host.Addrs()[0],
 		n.host.ID(),
 	)
+
+	return str
 }

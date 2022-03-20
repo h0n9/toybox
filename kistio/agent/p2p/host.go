@@ -26,7 +26,7 @@ func (n *Node) NewHost(listenAddrs crypto.Addrs) error {
 		listenAddrs = append(listenAddrs, addr)
 	}
 
-	privKeyP2P, err := n.PrivKey.ToECDSAP2P()
+	privKeyP2P, err := n.privKey.ToECDSAP2P()
 	if err != nil {
 		return err
 	}
