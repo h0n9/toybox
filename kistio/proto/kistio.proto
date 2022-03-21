@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+option go_package = "github.com/h0n9/toybox/kistio/proto";
+
 service kistio {
     rpc Publish(PublishRequest) returns (PublishResponse) {}
     rpc Subscribe(SubscribeRequest) returns (stream SubscribeResponse) {}
