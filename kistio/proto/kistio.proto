@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+service kistio {
+    rpc Publish(PublishRequest) returns (PublishResponse) {}
+    rpc Subscribe(SubscribeRequest) returns (stream SubscribeResponse) {}
+}
+
+// Message
+message PublishRequest {
+    string topic = 1;
+    bytes data = 2;
+}
+
+message PublishResponse {
+    bool ok = 1;
+}
+
+message SubscribeRequest {
+    string topic = 1;
+}
+
+message SubscribeResponse {
+    bytes data = 1;
+}
