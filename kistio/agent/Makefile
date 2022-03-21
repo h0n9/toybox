@@ -19,4 +19,4 @@ docker-build:
 	@docker build -t kistio-agent .
 
 docker-run:
-	@docker run --rm -it --env SEED=test kistio-agent
+	@docker-compose up && docker-compose down

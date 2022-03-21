@@ -1,0 +1,30 @@
+services:
+  agent-0: # seed
+    image: kistio-agent:latest
+    environment:
+      - LISTEN=/ip4/0.0.0.0/udp/7788/quic
+      - SEED=test-0
+    ports:
+      - 7780:7780
+  agent-1:
+    depends_on:
+      - agent-0
+    image: kistio-agent:latest
+    environment:
+      - LISTEN=/ip4/0.0.0.0/udp/7788/quic
+      - SEED=test-1
+      - BOOTSTRAP=/ip4/172.19.0.2/udp/7788/quic/p2p/QmbXyJsL3wnWa864f3GLv8bno2KhC6kRA2d3akVETLEfPo
+    ports:
+      - 7781:7780
+  agent-2:
+    depends_on:
+      - agent-0
+    image: kistio-agent:latest
+    environment:
+      - LISTEN=/ip4/0.0.0.0/udp/7788/quic
+      - SEED=test-2
+      - BOOTSTRAP=/ip4/172.19.0.2/udp/7788/quic/p2p/QmbXyJsL3wnWa864f3GLv8bno2KhC6kRA2d3akVETLEfPo
+    ports:
+      - 7782:7780
+networks:
+  default:
