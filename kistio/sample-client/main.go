@@ -51,8 +51,8 @@ func main() {
 	cli := pb.NewKistioClient(conn)
 
 	// init context
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
+	defer ctx.Done()
 
 	// init waitGroup
 	wg := sync.WaitGroup{}
@@ -106,7 +106,6 @@ func main() {
 				fmt.Println(err)
 				continue
 			}
-
 			fmt.Printf("%s\n", msg.GetData())
 		}
 	}()

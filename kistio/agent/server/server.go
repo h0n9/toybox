@@ -2,6 +2,9 @@ package server
 
 import (
 	"context"
+	"fmt"
+
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 
 	"github.com/h0n9/toybox/kistio/agent/p2p"
 	pb "github.com/h0n9/toybox/kistio/proto"
@@ -10,20 +13,37 @@ import (
 type KistioServer struct {
 	pb.UnimplementedKistioServer
 
-	node *p2p.Node
+	topics map[string]*pubsub.Topic
+	node   *p2p.Node
 }
 
 func NewKistioServer(node *p2p.Node) *KistioServer {
-	return &KistioServer{node: node}
+	return &KistioServer{
+		node:   node,
+		topics: make(map[string]*pubsub.Topic),
+	}
+}
+
+func (server *KistioServer) getTopic(name string) (*pubsub.Topic, error) {
+	topic, exist := server.topics[name]
+	if !exist {
+		tmp, err := server.node.Join(name)
+		if err != nil {
+			return nil, err
+		}
+		server.topics[name] = tmp
+		topic = tmp
+	}
+	return topic, nil
 }
 
 func (server *KistioServer) Publish(ctx context.Context, req *pb.PublishRequest) (*pb.PublishResponse, error) {
 	// check
-	tpStr := req.GetTopic()
+	tpName := req.GetTopic()
 	data := req.GetData()
 
 	// execute
-	tp, err := server.node.Join(tpStr)
+	tp, err := server.getTopic(tpName)
 	if err != nil {
 		return nil, err
 	}
@@ -31,15 +51,16 @@ func (server *KistioServer) Publish(ctx context.Context, req *pb.PublishRequest)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("%s\n", data)
 	return &pb.PublishResponse{Ok: true}, nil
 }
 
 func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio_SubscribeServer) error {
 	// check
-	tpStr := req.GetTopic()
+	tpName := req.GetTopic()
 
 	// execute
-	tp, err := server.node.Join(tpStr)
+	tp, err := server.getTopic(tpName)
 	if err != nil {
 		return err
 	}
@@ -47,6 +68,8 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 	if err != nil {
 		return err
 	}
+	defer sub.Cancel()
+	fmt.Println("sub:", tpName)
 	ctx := stream.Context()
 	for {
 		msg, err := sub.Next(ctx)
@@ -54,6 +77,9 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 			return err
 		}
 		data := msg.GetData()
-		stream.Send(&pb.SubscribeResponse{Data: data})
+		err = stream.Send(&pb.SubscribeResponse{Data: data})
+		if err != nil {
+			return err
+		}
 	}
 }
