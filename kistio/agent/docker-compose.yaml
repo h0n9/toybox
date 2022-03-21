@@ -1,6 +1,6 @@
 services:
   agent-0: # seed
-    image: kistio-agent:latest
+    image: h0n9/kistio-agent:latest
     environment:
       - LISTEN=/ip4/0.0.0.0/udp/7788/quic
       - SEED=test-0
@@ -12,7 +12,7 @@ services:
   agent-1:
     depends_on:
       - agent-0
-    image: kistio-agent:latest
+    image: h0n9/kistio-agent:latest
     environment:
       - LISTEN=/ip4/0.0.0.0/udp/7788/quic
       - SEED=test-1
@@ -24,7 +24,7 @@ services:
   agent-2:
     depends_on:
       - agent-0
-    image: kistio-agent:latest
+    image: h0n9/kistio-agent:latest
     environment:
       - LISTEN=/ip4/0.0.0.0/udp/7788/quic
       - SEED=test-2
