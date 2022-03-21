@@ -16,11 +16,7 @@ func (n *Node) NewPubSub() error {
 }
 
 func (n *Node) Join(topic string) (*pubsub.Topic, error) {
-	tp, err := n.pubSub.Join(topic)
-	if err != nil {
-		return nil, err
-	}
-	return tp, nil
+	return n.pubSub.Join(topic)
 }
 
 /*
