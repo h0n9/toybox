@@ -3,7 +3,9 @@ FROM golang:1.17.8-alpine3.15 AS builder
 RUN apk add build-base
 WORKDIR /usr/src/app
 COPY go.mod go.sum ./
+RUN go mod download
 COPY p2p/ p2p/
+COPY server/ server/
 COPY util/ util/
 COPY cmd/ cmd/
 COPY Makefile .

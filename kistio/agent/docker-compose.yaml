@@ -2,10 +2,11 @@ services:
   agent-0: # seed
     image: h0n9/kistio-agent:latest
     environment:
-      - LISTEN=/ip4/0.0.0.0/udp/7788/quic
+      - LISTENS=/ip4/0.0.0.0/udp/7788/quic
       - SEED=test-0
+      - GRPC_LISTEN=0.0.0.0:7788
     ports:
-      - 7780:7780
+      - 7780:7788
     networks:
       agent-net:
         ipv4_address: 172.19.0.2
@@ -14,11 +15,12 @@ services:
       - agent-0
     image: h0n9/kistio-agent:latest
     environment:
-      - LISTEN=/ip4/0.0.0.0/udp/7788/quic
+      - LISTENS=/ip4/0.0.0.0/udp/7788/quic
+      - BOOTSTRAPS=/ip4/172.19.0.2/udp/7788/quic/p2p/QmbXyJsL3wnWa864f3GLv8bno2KhC6kRA2d3akVETLEfPo
       - SEED=test-1
-      - BOOTSTRAP=/ip4/172.19.0.2/udp/7788/quic/p2p/QmbXyJsL3wnWa864f3GLv8bno2KhC6kRA2d3akVETLEfPo
+      - GRPC_LISTEN=0.0.0.0:7788
     ports:
-      - 7781:7780
+      - 7781:7788
     networks:
       agent-net:
   agent-2:
@@ -26,11 +28,12 @@ services:
       - agent-0
     image: h0n9/kistio-agent:latest
     environment:
-      - LISTEN=/ip4/0.0.0.0/udp/7788/quic
+      - LISTENS=/ip4/0.0.0.0/udp/7788/quic
+      - BOOTSTRAPS=/ip4/172.19.0.2/udp/7788/quic/p2p/QmbXyJsL3wnWa864f3GLv8bno2KhC6kRA2d3akVETLEfPo
       - SEED=test-2
-      - BOOTSTRAP=/ip4/172.19.0.2/udp/7788/quic/p2p/QmbXyJsL3wnWa864f3GLv8bno2KhC6kRA2d3akVETLEfPo
+      - GRPC_LISTEN=0.0.0.0:7788
     ports:
-      - 7782:7780
+      - 7782:7788
     networks:
       agent-net:
 networks:

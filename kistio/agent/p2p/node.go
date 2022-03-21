@@ -29,8 +29,8 @@ func NewNode(ctx context.Context, cfg *util.Config) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	if cfg.PrivKeySeed != "" {
-		privKey, err = crypto.GenPrivKeyFromSeed([]byte(cfg.PrivKeySeed))
+	if cfg.NodePrivKeySeed != "" {
+		privKey, err = crypto.GenPrivKeyFromSeed([]byte(cfg.NodePrivKeySeed))
 		if err != nil {
 			return nil, err
 		}
@@ -43,7 +43,7 @@ func NewNode(ctx context.Context, cfg *util.Config) (*Node, error) {
 		address: privKey.PubKey().Address(),
 	}
 
-	err = node.NewHost(cfg.ListenAddrs)
+	err = node.NewHost(cfg.NodeListens)
 	if err != nil {
 		return nil, err
 	}
