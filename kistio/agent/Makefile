@@ -22,4 +22,4 @@ docker-push:
 	@docker push -t h0n9/kistio-agent
 
 docker-run:
-	@docker-compose up && docker-compose down
+	@docker-compose up; docker-compose down
