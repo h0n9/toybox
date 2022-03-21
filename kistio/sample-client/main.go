@@ -17,10 +17,10 @@ import (
 )
 
 const (
-	DefaultHost     = "127.0.0.1"
-	DefaultPort     = "7788"
-	DefaultTopicPub = "balance"
-	DefaultTopicSub = "account"
+	DefaultAgentHost = "127.0.0.1"
+	DefaultAgentPort = "7788"
+	DefaultTopicPub  = "balance"
+	DefaultTopicSub  = "account"
 )
 
 type Msg struct {
@@ -31,17 +31,17 @@ type Msg struct {
 
 func main() {
 	// init flags
-	host := *flag.String("host", DefaultHost, "grpc listen host")
-	port := *flag.String("port", DefaultPort, "grpc listen port")
-	topicPub := *flag.String("topic-pub", DefaultTopicPub, "topic for publish")
-	topicSub := *flag.String("topic-sub", DefaultTopicSub, "topic for subscribe")
+	agentHost := flag.String("agent-host", DefaultAgentHost, "agent grpc host")
+	agentPort := flag.String("agent-port", DefaultAgentPort, "agent grpc port")
+	topicPub := flag.String("topic-pub", DefaultTopicPub, "topic for publish")
+	topicSub := flag.String("topic-sub", DefaultTopicSub, "topic for subscribe")
 	flag.Parse()
 
 	// init grpc.Dial
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-	conn, err := grpc.Dial(net.JoinHostPort(host, port), opts...)
+	conn, err := grpc.Dial(net.JoinHostPort(*agentHost, *agentPort), opts...)
 	if err != nil {
 		panic(err)
 	}
@@ -63,7 +63,7 @@ func main() {
 		for {
 			// init msg to send
 			msg := Msg{
-				Sender:   topicSub,
+				Sender:   *topicSub,
 				Data:     []byte("I'd like to buy an apple"),
 				Metadata: []byte(time.Now().String()),
 			}
@@ -74,7 +74,7 @@ func main() {
 			}
 
 			res, err := cli.Publish(ctx, &pb.PublishRequest{
-				Topic: topicPub,
+				Topic: *topicPub,
 				Data:  data,
 			})
 			if err != nil {
@@ -93,7 +93,7 @@ func main() {
 	// init goroutine for subscribe
 	wg.Add(1)
 	go func() {
-		stream, err := cli.Subscribe(ctx, &pb.SubscribeRequest{Topic: topicSub})
+		stream, err := cli.Subscribe(ctx, &pb.SubscribeRequest{Topic: *topicSub})
 		if err != nil {
 			panic(err)
 		}

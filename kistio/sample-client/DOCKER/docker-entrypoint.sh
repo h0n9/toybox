@@ -2,12 +2,12 @@
 
 FLAGS=
 
-if [ ! -z "$HOST" ]; then
-    FLAGS="$FLAGS --host $HOST"
+if [ ! -z "$AGENT_HOST" ]; then
+    FLAGS="$FLAGS --agent-host $AGENT_HOST"
 fi
 
-if [ ! -z "$PORT" ]; then
-    FLAGS="$FLAGS --port $PORT"
+if [ ! -z "$AGENT_PORT" ]; then
+    FLAGS="$FLAGS --agent-port $AGENT_PORT"
 fi
 
 if [ ! -z "$TOPIC_PUB" ]; then
@@ -17,5 +17,7 @@ fi
 if [ ! -z "$TOPIC_SUB" ]; then
     FLAGS="$FLAGS --topic-sub $TOPIC_SUB"
 fi
+
+echo $FLAGS
 
 /usr/bin/app/sample-client $FLAGS
