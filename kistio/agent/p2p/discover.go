@@ -6,69 +6,69 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	discovery "github.com/libp2p/go-libp2p-discovery"
-	dht "github.com/libp2p/go-libp2p-kad-dht"
+	"github.com/multiformats/go-multiaddr"
 
 	"github.com/postie-labs/go-postie-lib/crypto"
 )
 
-func (n *Node) DiscoverPeers(bsNodes crypto.Addrs) error {
-	// init peer discovery alg.
-	peerDiscovery, err := dht.New(n.ctx, n.host)
-	if err != nil {
-		return err
-	}
-
-	// bootstrap peer discovery
-	err = peerDiscovery.Bootstrap(n.ctx)
-	if err != nil {
-		return err
-	}
+func (n *Node) connect(addrs []multiaddr.Multiaddr) error {
 	var wg sync.WaitGroup
-	for _, bsn := range bsNodes {
-		peerInfo, err := peer.AddrInfoFromP2pAddr(bsn)
+	for _, addr := range addrs {
+		peerInfo, err := peer.AddrInfoFromP2pAddr(addr)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		wg.Add(1)
-
 		go func() {
 			defer wg.Done()
 			err = n.host.Connect(n.ctx, *peerInfo)
 			if err != nil {
 				panic(err)
 			}
-
-			fmt.Println("connected to:", *peerInfo)
+			fmt.Println("peers:", n.GetPeers())
 		}()
-
 	}
 	wg.Wait()
+	return nil
+}
 
-	// advertise rendez-vous annoucement
-	routingDiscovery := discovery.NewRoutingDiscovery(peerDiscovery)
-	discovery.Advertise(n.ctx, routingDiscovery, RendezVous)
-
-	peers, err := routingDiscovery.FindPeers(n.ctx, RendezVous)
+func (n *Node) Bootstrap(bsNodes crypto.Addrs) error {
+	// bootstrap peer discovery
+	err := n.peerDiscovery.Bootstrap(n.ctx)
 	if err != nil {
 		return err
 	}
+	return n.connect(bsNodes)
+}
 
-	for peer := range peers {
-		if peer.ID == n.host.ID() {
-			continue
-		}
+func (n *Node) DiscoverPeers() {
+	// advertise rendez-vous annoucement
+	routingDiscovery := discovery.NewRoutingDiscovery(n.peerDiscovery)
+	discovery.Advertise(n.ctx, routingDiscovery, RendezVous)
 
-		// stream, err := n.host.NewStream(n.ctx, peer.ID, ProtocolID)
-		err = n.host.Connect(n.ctx, peer)
+	for {
+		addrs, err := discovery.FindPeers(n.ctx, routingDiscovery, RendezVous)
 		if err != nil {
-			fmt.Println("failed to connect to:", peer)
-			continue
+			fmt.Println(err)
+			return
 		}
-
-		fmt.Println("connected to:", peer)
-		// handleStream(stream)
+		err = n.connect(addrs)
 	}
 
-	return nil
+	// for peer := range peers {
+	// 	if peer.ID == n.host.ID() {
+	// 		continue
+	// 	}
+
+	// 	// stream, err := n.host.NewStream(n.ctx, peer.ID, ProtocolID)
+	// 	err = n.host.Connect(n.ctx, peer)
+	// 	if err != nil {
+	// 		fmt.Println("failed to connect to:", peer)
+	// 		continue
+	// 	}
+
+	// 	fmt.Println("connected to:", peer)
+	// 	// handleStream(stream)
+	// }
 }

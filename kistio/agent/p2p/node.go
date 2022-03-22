@@ -8,6 +8,7 @@ import (
 	"github.com/h0n9/toybox/kistio/agent/util"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
+	dht "github.com/libp2p/go-libp2p-kad-dht"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/postie-labs/go-postie-lib/crypto"
 )
@@ -19,7 +20,8 @@ type Node struct {
 	pubKey  *crypto.PubKey
 	address crypto.Addr
 
-	host host.Host
+	host          host.Host
+	peerDiscovery *dht.IpfsDHT
 
 	pubSub *pubsub.PubSub
 }
@@ -47,6 +49,13 @@ func NewNode(ctx context.Context, cfg *util.Config) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// init peer discovery alg.
+	peerDiscovery, err := dht.New(node.ctx, node.host)
+	if err != nil {
+		return nil, err
+	}
+	node.peerDiscovery = peerDiscovery
 
 	err = node.NewPubSub()
 	if err != nil {

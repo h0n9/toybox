@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 
@@ -51,7 +50,6 @@ func (server *KistioServer) Publish(ctx context.Context, req *pb.PublishRequest)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("%s\n", data)
 	return &pb.PublishResponse{Ok: true}, nil
 }
 
@@ -69,7 +67,6 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 		return err
 	}
 	defer sub.Cancel()
-	fmt.Println("sub:", tpName)
 	ctx := stream.Context()
 	for {
 		msg, err := sub.Next(ctx)
