@@ -29,7 +29,7 @@ func main() {
 		panic(err)
 	}
 
-	go node.DiscoverPeers()
+	go node.DiscoverDHT()
 
 	fmt.Println(node.Info())
 

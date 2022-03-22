@@ -3,6 +3,7 @@ package p2p
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	discovery "github.com/libp2p/go-libp2p-discovery"
@@ -42,33 +43,37 @@ func (n *Node) Bootstrap(bsNodes crypto.Addrs) error {
 	return n.connect(bsNodes)
 }
 
-func (n *Node) DiscoverPeers() {
+func (n *Node) DiscoverMDNS() error {
+	return nil
+}
+
+func (n *Node) DiscoverDHT() error {
 	// advertise rendez-vous annoucement
 	routingDiscovery := discovery.NewRoutingDiscovery(n.peerDiscovery)
 	discovery.Advertise(n.ctx, routingDiscovery, RendezVous)
 
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
 	for {
-		addrs, err := discovery.FindPeers(n.ctx, routingDiscovery, RendezVous)
-		if err != nil {
-			fmt.Println(err)
-			return
+		select {
+		case <-n.ctx.Done():
+			return nil
+		case <-ticker.C:
+			peers, err := discovery.FindPeers(n.ctx, routingDiscovery, RendezVous)
+			if err != nil {
+				return err
+			}
+			for _, p := range peers {
+				if p.ID == n.GetHostID() {
+					continue
+				}
+
+				err := n.connect(p.Addrs)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
 		}
-		err = n.connect(addrs)
 	}
-
-	// for peer := range peers {
-	// 	if peer.ID == n.host.ID() {
-	// 		continue
-	// 	}
-
-	// 	// stream, err := n.host.NewStream(n.ctx, peer.ID, ProtocolID)
-	// 	err = n.host.Connect(n.ctx, peer)
-	// 	if err != nil {
-	// 		fmt.Println("failed to connect to:", peer)
-	// 		continue
-	// 	}
-
-	// 	fmt.Println("connected to:", peer)
-	// 	// handleStream(stream)
-	// }
 }
