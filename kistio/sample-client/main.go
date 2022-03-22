@@ -73,6 +73,7 @@ func main() {
 				continue
 			}
 
+			fmt.Printf("client-pub: %s\n", data)
 			res, err := cli.Publish(ctx, &pb.PublishRequest{
 				Topic: *topicPub,
 				Data:  data,
@@ -106,7 +107,7 @@ func main() {
 				fmt.Println(err)
 				continue
 			}
-			fmt.Printf("%s\n", msg.GetData())
+			fmt.Printf("client-sub: %s\n", msg.GetData())
 		}
 	}()
 

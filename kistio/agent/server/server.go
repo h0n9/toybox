@@ -51,7 +51,7 @@ func (server *KistioServer) Publish(ctx context.Context, req *pb.PublishRequest)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("%s\n", data)
+	fmt.Printf("server-pub: %s\n", data)
 	return &pb.PublishResponse{Ok: true}, nil
 }
 
@@ -69,14 +69,13 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 		return err
 	}
 	defer sub.Cancel()
-	fmt.Println("sub:", tpName)
-	ctx := stream.Context()
 	for {
-		msg, err := sub.Next(ctx)
+		msg, err := sub.Next(stream.Context())
 		if err != nil {
 			return err
 		}
 		data := msg.GetData()
+		fmt.Printf("server-sub: %s\n", data)
 		err = stream.Send(&pb.SubscribeResponse{Data: data})
 		if err != nil {
 			return err
