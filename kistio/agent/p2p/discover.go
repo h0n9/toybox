@@ -3,72 +3,85 @@ package p2p
 import (
 	"fmt"
 	"sync"
+	"time"
 
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	discovery "github.com/libp2p/go-libp2p-discovery"
-	dht "github.com/libp2p/go-libp2p-kad-dht"
+	"github.com/multiformats/go-multiaddr"
 
 	"github.com/postie-labs/go-postie-lib/crypto"
 )
 
-func (n *Node) DiscoverPeers(bsNodes crypto.Addrs) error {
-	// init peer discovery alg.
-	peerDiscovery, err := dht.New(n.ctx, n.host)
+func (n *Node) connectPeerInfo(pi peer.AddrInfo) error {
+	if n.host.Network().Connectedness(pi.ID) == network.Connected {
+		return nil
+	}
+	err := n.host.Connect(n.ctx, pi)
 	if err != nil {
 		return err
 	}
+	fmt.Println("connected:", pi.ID, "peers:", len(n.GetPeers()))
+	return nil
+}
 
-	// bootstrap peer discovery
-	err = peerDiscovery.Bootstrap(n.ctx)
-	if err != nil {
-		return err
-	}
+func (n *Node) connectMultiAddrs(addrs []multiaddr.Multiaddr) error {
 	var wg sync.WaitGroup
-	for _, bsn := range bsNodes {
-		peerInfo, err := peer.AddrInfoFromP2pAddr(bsn)
+	for _, addr := range addrs {
+		pi, err := peer.AddrInfoFromP2pAddr(addr)
 		if err != nil {
-			panic(err)
+			return err
 		}
-
 		wg.Add(1)
-
 		go func() {
 			defer wg.Done()
-			err = n.host.Connect(n.ctx, *peerInfo)
+			err = n.connectPeerInfo(*pi)
 			if err != nil {
-				panic(err)
+				fmt.Println(err)
+				return
 			}
-
-			fmt.Println("connected to:", *peerInfo)
 		}()
-
 	}
 	wg.Wait()
+	return nil
+}
 
-	// advertise rendez-vous annoucement
-	routingDiscovery := discovery.NewRoutingDiscovery(peerDiscovery)
-	discovery.Advertise(n.ctx, routingDiscovery, RendezVous)
-
-	peers, err := routingDiscovery.FindPeers(n.ctx, RendezVous)
+func (n *Node) Bootstrap(bsNodes crypto.Addrs) error {
+	// bootstrap peer discovery
+	err := n.peerDiscovery.Bootstrap(n.ctx)
 	if err != nil {
 		return err
 	}
+	return n.connectMultiAddrs(bsNodes)
+}
 
-	for peer := range peers {
-		if peer.ID == n.host.ID() {
-			continue
+func (n *Node) DiscoverDHT() error {
+	// advertise rendez-vous annoucement
+	routingDiscovery := discovery.NewRoutingDiscovery(n.peerDiscovery)
+	discovery.Advertise(n.ctx, routingDiscovery, RendezVous)
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-n.ctx.Done():
+			return nil
+		case <-ticker.C:
+			pis, err := discovery.FindPeers(n.ctx, routingDiscovery, RendezVous)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			for _, pi := range pis {
+				if pi.ID == n.GetHostID() {
+					continue
+				}
+				err := n.connectPeerInfo(pi)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
 		}
-
-		// stream, err := n.host.NewStream(n.ctx, peer.ID, ProtocolID)
-		err = n.host.Connect(n.ctx, peer)
-		if err != nil {
-			fmt.Println("failed to connect to:", peer)
-			continue
-		}
-
-		fmt.Println("connected to:", peer)
-		// handleStream(stream)
 	}
-
-	return nil
 }

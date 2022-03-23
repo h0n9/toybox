@@ -24,10 +24,12 @@ func main() {
 		panic(err)
 	}
 
-	err = node.DiscoverPeers(cfg.NodeBootstraps)
+	err = node.Bootstrap(cfg.NodeBootstraps)
 	if err != nil {
 		panic(err)
 	}
+
+	go node.DiscoverDHT()
 
 	fmt.Println(node.Info())
 

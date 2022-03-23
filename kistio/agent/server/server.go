@@ -69,8 +69,9 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 		return err
 	}
 	defer sub.Cancel()
+	ctx := stream.Context()
 	for {
-		msg, err := sub.Next(stream.Context())
+		msg, err := sub.Next(ctx)
 		if err != nil {
 			return err
 		}

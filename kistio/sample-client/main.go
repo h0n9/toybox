@@ -73,7 +73,6 @@ func main() {
 				continue
 			}
 
-			fmt.Printf("client-pub: %s\n", data)
 			res, err := cli.Publish(ctx, &pb.PublishRequest{
 				Topic: *topicPub,
 				Data:  data,
@@ -86,6 +85,8 @@ func main() {
 			if !res.Ok {
 				fmt.Println("failed to publish msg")
 			}
+
+			fmt.Printf("client-pub: %s\n", data)
 
 			time.Sleep(1 * time.Second)
 		}
