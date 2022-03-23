@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	discovery "github.com/libp2p/go-libp2p-discovery"
 	"github.com/multiformats/go-multiaddr"
@@ -12,22 +13,33 @@ import (
 	"github.com/postie-labs/go-postie-lib/crypto"
 )
 
-func (n *Node) connect(addrs []multiaddr.Multiaddr) error {
+func (n *Node) connectPeerInfo(pi peer.AddrInfo) error {
+	if n.host.Network().Connectedness(pi.ID) == network.Connected {
+		return nil
+	}
+	err := n.host.Connect(n.ctx, pi)
+	if err != nil {
+		return err
+	}
+	fmt.Println("connected:", pi.ID, "peers:", len(n.GetPeers()))
+	return nil
+}
+
+func (n *Node) connectMultiAddrs(addrs []multiaddr.Multiaddr) error {
 	var wg sync.WaitGroup
 	for _, addr := range addrs {
-		peerInfo, err := peer.AddrInfoFromP2pAddr(addr)
+		pi, err := peer.AddrInfoFromP2pAddr(addr)
 		if err != nil {
 			return err
 		}
-
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = n.host.Connect(n.ctx, *peerInfo)
+			err = n.connectPeerInfo(*pi)
 			if err != nil {
-				panic(err)
+				fmt.Println(err)
+				return
 			}
-			fmt.Println("peers:", n.GetPeers())
 		}()
 	}
 	wg.Wait()
@@ -40,11 +52,7 @@ func (n *Node) Bootstrap(bsNodes crypto.Addrs) error {
 	if err != nil {
 		return err
 	}
-	return n.connect(bsNodes)
-}
-
-func (n *Node) DiscoverMDNS() error {
-	return nil
+	return n.connectMultiAddrs(bsNodes)
 }
 
 func (n *Node) DiscoverDHT() error {
@@ -60,16 +68,16 @@ func (n *Node) DiscoverDHT() error {
 		case <-n.ctx.Done():
 			return nil
 		case <-ticker.C:
-			peers, err := discovery.FindPeers(n.ctx, routingDiscovery, RendezVous)
+			pis, err := discovery.FindPeers(n.ctx, routingDiscovery, RendezVous)
 			if err != nil {
-				return err
+				fmt.Println(err)
+				continue
 			}
-			for _, p := range peers {
-				if p.ID == n.GetHostID() {
+			for _, pi := range pis {
+				if pi.ID == n.GetHostID() {
 					continue
 				}
-
-				err := n.connect(p.Addrs)
+				err := n.connectPeerInfo(pi)
 				if err != nil {
 					fmt.Println(err)
 				}
