@@ -51,7 +51,11 @@ func NewNode(ctx context.Context, cfg *util.Config) (*Node, error) {
 	}
 
 	// init peer discovery alg.
-	peerDiscovery, err := dht.New(node.ctx, node.host)
+	dhtOptions := []dht.Option{}
+	if len(cfg.NodeBootstraps) == 0 {
+		dhtOptions = append(dhtOptions, dht.Mode(dht.ModeServer))
+	}
+	peerDiscovery, err := dht.New(node.ctx, node.host, dhtOptions...)
 	if err != nil {
 		return nil, err
 	}
