@@ -86,6 +86,8 @@ func main() {
 				fmt.Println("failed to publish msg")
 			}
 
+			fmt.Printf("pub: %s\n", data)
+
 			time.Sleep(1 * time.Second)
 		}
 	}()
@@ -106,7 +108,7 @@ func main() {
 				fmt.Println(err)
 				continue
 			}
-			fmt.Printf("%s\n", msg.GetData())
+			fmt.Printf("sub: %s\n", msg.GetData())
 		}
 	}()
 
