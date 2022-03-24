@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/h0n9/toybox/kistio/agent/p2p"
 	"github.com/h0n9/toybox/kistio/agent/server"
@@ -14,9 +17,12 @@ import (
 
 func main() {
 	// prepare
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	cfg := util.NewConfig()
 	cfg.ParseFlags()
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	// init node
 	node, err := p2p.NewNode(ctx, cfg)
@@ -29,7 +35,7 @@ func main() {
 		panic(err)
 	}
 
-	go node.DiscoverDHT(cfg.RendezVous)
+	go node.Discover(cfg.RendezVous)
 
 	fmt.Println(node.Info())
 
@@ -48,47 +54,21 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	go func() {
+		sig := <-sigs // block until signal
+		fmt.Printf("\nRECEIVED SIGNAL: %s\n", sig)
+
+		cancel()               // cancel context
+		grpcSrv.GracefulStop() // gracefully stop grpcServer
+		err = node.Close()     // close node
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+
 	err = grpcSrv.Serve(listener)
 	if err != nil {
 		panic(err)
 	}
-
-	// tp, err := node.Join("test")
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// wg := sync.WaitGroup{}
-
-	// // publish
-	// wg.Add(1)
-	// go func() {
-	// 	for {
-	// 		// publish simple data for test
-	// 		err = tp.Publish(ctx, []byte(fmt.Sprintf("%s - hello world", time.Now().String())))
-	// 		time.Sleep(1 * time.Second)
-	// 	}
-	// }()
-
-	// // subscribe
-	// wg.Add(1)
-	// go func() {
-	// 	sub, err := tp.Subscribe()
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// 	for {
-	// 		msg, err := sub.Next(ctx)
-	// 		if err != nil {
-	// 			fmt.Println(err)
-	// 			continue
-	// 		}
-	// 		if msg.GetFrom() == node.GetHostID() {
-	// 			continue
-	// 		}
-	// 		fmt.Printf("[%s] %s\n", msg.GetFrom().Pretty(), msg.GetData())
-	// 	}
-	// }()
-
-	// wg.Wait()
 }

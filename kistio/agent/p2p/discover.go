@@ -55,7 +55,7 @@ func (n *Node) Bootstrap(bsNodes crypto.Addrs) error {
 	return n.connectMultiAddrs(bsNodes)
 }
 
-func (n *Node) DiscoverDHT(rendezVous string) error {
+func (n *Node) Discover(rendezVous string) error {
 	// advertise rendez-vous annoucement
 	routingDiscovery := discovery.NewRoutingDiscovery(n.peerDiscovery)
 	discovery.Advertise(n.ctx, routingDiscovery, rendezVous)
@@ -66,6 +66,7 @@ func (n *Node) DiscoverDHT(rendezVous string) error {
 	for {
 		select {
 		case <-n.ctx.Done():
+			fmt.Println("stop discovering peers")
 			return nil
 		case <-ticker.C:
 			pis, err := discovery.FindPeers(n.ctx, routingDiscovery, rendezVous)
