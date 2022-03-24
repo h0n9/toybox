@@ -1,4 +1,5 @@
 version: "3.8"
+name: kistio
 services:
   agent-ha-0: # seed
     image: h0n9/kistio-agent:latest
