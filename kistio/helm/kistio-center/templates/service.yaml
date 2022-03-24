@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kistio-center.fullname" . }}
+  labels:
+    {{- include "kistio-center.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 7780
+      protocol: UDP
+      name: quic
+  selector:
+    {{- include "kistio-center.selectorLabels" . | nindent 4 }}
