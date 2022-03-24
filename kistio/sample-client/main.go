@@ -7,11 +7,16 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 
 	pb "github.com/h0n9/toybox/kistio/proto"
 )
@@ -37,6 +42,9 @@ func main() {
 	topicSub := flag.String("topic-sub", DefaultTopicSub, "topic for subscribe")
 	flag.Parse()
 
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
 	// init grpc.Dial
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -51,8 +59,15 @@ func main() {
 	cli := pb.NewKistioClient(conn)
 
 	// init context
-	ctx := context.Background()
-	defer ctx.Done()
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// handle signals
+	go func() {
+		sig := <-sigs
+		fmt.Printf("\nRECEIVED SIGNAL: %s\n", sig)
+
+		cancel()
+	}()
 
 	// init waitGroup
 	wg := sync.WaitGroup{}
@@ -60,48 +75,58 @@ func main() {
 	// init goroutine for publish
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
 		for {
-			// init msg to send
-			msg := Msg{
-				Sender:   *topicSub,
-				Data:     []byte("I'd like to buy an apple"),
-				Metadata: []byte(time.Now().String()),
-			}
-			data, err := json.Marshal(msg)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
+			select {
+			case <-ctx.Done():
+				fmt.Println("stop sending msgs")
+				return
+			case <-ticker.C:
+				// init msg to send
+				msg := Msg{
+					Sender:   *topicSub,
+					Data:     []byte("I'd like to buy an apple"),
+					Metadata: []byte(time.Now().String()),
+				}
+				data, err := json.Marshal(msg)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
 
-			res, err := cli.Publish(ctx, &pb.PublishRequest{
-				Topic: *topicPub,
-				Data:  data,
-			})
-			if err != nil {
-				fmt.Println(err)
-				continue
+				res, err := cli.Publish(ctx, &pb.PublishRequest{
+					Topic: *topicPub,
+					Data:  data,
+				})
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+
+				if !res.Ok {
+					fmt.Println("failed to publish msg")
+				}
+
+				fmt.Printf("client-pub: %s\n", data)
 			}
-
-			if !res.Ok {
-				fmt.Println("failed to publish msg")
-			}
-
-			fmt.Printf("client-pub: %s\n", data)
-
-			time.Sleep(1 * time.Second)
 		}
 	}()
 
 	// init goroutine for subscribe
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		stream, err := cli.Subscribe(ctx, &pb.SubscribeRequest{Topic: *topicSub})
 		if err != nil {
 			panic(err)
 		}
+		defer stream.CloseSend()
 		for {
 			msg, err := stream.Recv()
-			if err == io.EOF {
+			if err == io.EOF || status.Code(err) == codes.Canceled {
+				fmt.Println("stop stream receiving msgs")
 				break
 			}
 			if err != nil {
