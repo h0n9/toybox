@@ -8,4 +8,3 @@ data:
   listens: /ip4/0.0.0.0/udp/7780/quic
   seed: kistio-center
   enable-dht-server: "true"
-  bootstrap: /ip4/192.168.136.65/udp/7780/quic/p2p/QmcrAKUhzGuxN8oBJkDHGHnvGr7KVspp1SPA4vVAZBP7LF

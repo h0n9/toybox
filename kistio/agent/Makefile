@@ -19,7 +19,7 @@ docker-build:
 	@docker build -t h0n9/kistio-agent .
 
 docker-push:
-	@docker push -t h0n9/kistio-agent
+	@docker push h0n9/kistio-agent
 
 docker-run:
 	@docker-compose up; docker-compose down
