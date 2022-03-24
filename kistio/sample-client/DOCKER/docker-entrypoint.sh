@@ -18,6 +18,10 @@ if [ ! -z "$TOPIC_SUB" ]; then
     FLAGS="$FLAGS --topic-sub $TOPIC_SUB"
 fi
 
+if [ ! -z "$INTERVAL" ]; then
+    FLAGS="$FLAGS --interval $INTERVAL"
+fi
+
 echo $FLAGS
 
 /usr/bin/app/sample-client $FLAGS

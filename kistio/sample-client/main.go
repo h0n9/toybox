@@ -26,6 +26,7 @@ const (
 	DefaultAgentPort = "7788"
 	DefaultTopicPub  = "balance"
 	DefaultTopicSub  = "account"
+	DefaultInterval  = int64(1000) // millisecond
 )
 
 type Msg struct {
@@ -40,6 +41,7 @@ func main() {
 	agentPort := flag.String("agent-port", DefaultAgentPort, "agent grpc port")
 	topicPub := flag.String("topic-pub", DefaultTopicPub, "topic for publish")
 	topicSub := flag.String("topic-sub", DefaultTopicSub, "topic for subscribe")
+	interval := flag.Int64("interval", DefaultInterval, "interval for publish")
 	flag.Parse()
 
 	sigs := make(chan os.Signal, 1)
@@ -76,7 +78,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ticker := time.NewTicker(100 * time.Millisecond)
+		ticker := time.NewTicker(time.Duration(*interval) * time.Millisecond)
 		defer ticker.Stop()
 		for {
 			select {
