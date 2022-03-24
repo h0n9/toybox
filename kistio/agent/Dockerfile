@@ -13,6 +13,7 @@ RUN make build
 
 # runner
 FROM alpine:3.15.1 AS runner
+RUN apk add dumb-init --no-cache
 WORKDIR /usr/bin/app
 COPY --from=builder /usr/src/app/kistio-agent .
 COPY DOCKER/docker-entrypoint.sh /usr/bin
