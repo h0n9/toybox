@@ -29,7 +29,7 @@ func main() {
 		panic(err)
 	}
 
-	go node.DiscoverDHT()
+	go node.DiscoverDHT(cfg.RendezVous)
 
 	fmt.Println(node.Info())
 

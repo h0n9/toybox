@@ -9,8 +9,7 @@ import (
 
 const (
 	TransportProtocol = "quic"
-	ProtocolID        = "/petit-chat/1.0.0"
-	RendezVous        = "t'as bien dormi ?"
+	ProtocolID        = "/kistio-agent/1.0.0"
 
 	DefaultListenAddr = "/ip4/0.0.0.0/udp"
 	MinListenPort     = 49152

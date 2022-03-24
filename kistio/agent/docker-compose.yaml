@@ -5,6 +5,7 @@ services:
     environment:
       - LISTENS=/ip4/0.0.0.0/udp/7780/quic
       - SEED=test-0
+      - ENABLE_DHT_SERVER=true
     networks:
       agent-net:
         ipv4_address: 172.19.0.2
@@ -16,6 +17,7 @@ services:
       - LISTENS=/ip4/0.0.0.0/udp/7780/quic
       - BOOTSTRAPS=/ip4/172.19.0.2/udp/7780/quic/p2p/QmbXyJsL3wnWa864f3GLv8bno2KhC6kRA2d3akVETLEfPo
       - SEED=test-1
+      - ENABLE_DHT_SERVER=true
     networks:
       agent-net:
   agent-ha-2:
@@ -26,6 +28,7 @@ services:
       - LISTENS=/ip4/0.0.0.0/udp/7780/quic
       - BOOTSTRAPS=/ip4/172.19.0.2/udp/7780/quic/p2p/QmbXyJsL3wnWa864f3GLv8bno2KhC6kRA2d3akVETLEfPo
       - SEED=test-2
+      - ENABLE_DHT_SERVER=true
     networks:
       agent-net:
   agent-0:
@@ -36,6 +39,7 @@ services:
       - LISTENS=/ip4/0.0.0.0/udp/7780/quic
       - BOOTSTRAPS=/ip4/172.19.0.2/udp/7780/quic/p2p/QmbXyJsL3wnWa864f3GLv8bno2KhC6kRA2d3akVETLEfPo
       - GRPC_LISTEN=0.0.0.0:7788
+      - ENABLE_DHT_SERVER=true
     networks:
       agent-net:
         ipv4_address: 172.19.1.2
@@ -58,6 +62,7 @@ services:
       - LISTENS=/ip4/0.0.0.0/udp/7780/quic
       - BOOTSTRAPS=/ip4/172.19.0.2/udp/7780/quic/p2p/QmbXyJsL3wnWa864f3GLv8bno2KhC6kRA2d3akVETLEfPo
       - GRPC_LISTEN=0.0.0.0:7788
+      - ENABLE_DHT_SERVER=true
     networks:
       agent-net:
         ipv4_address: 172.19.1.3

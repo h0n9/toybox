@@ -55,10 +55,10 @@ func (n *Node) Bootstrap(bsNodes crypto.Addrs) error {
 	return n.connectMultiAddrs(bsNodes)
 }
 
-func (n *Node) DiscoverDHT() error {
+func (n *Node) DiscoverDHT(rendezVous string) error {
 	// advertise rendez-vous annoucement
 	routingDiscovery := discovery.NewRoutingDiscovery(n.peerDiscovery)
-	discovery.Advertise(n.ctx, routingDiscovery, RendezVous)
+	discovery.Advertise(n.ctx, routingDiscovery, rendezVous)
 
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
@@ -68,7 +68,7 @@ func (n *Node) DiscoverDHT() error {
 		case <-n.ctx.Done():
 			return nil
 		case <-ticker.C:
-			pis, err := discovery.FindPeers(n.ctx, routingDiscovery, RendezVous)
+			pis, err := discovery.FindPeers(n.ctx, routingDiscovery, rendezVous)
 			if err != nil {
 				fmt.Println(err)
 				continue
