@@ -52,6 +52,7 @@ services:
       - AGENT_PORT=7788
       - TOPIC_PUB=balance
       - TOPIC_SUB=account
+      - INTERVAL=100
     networks:
       agent-net:
   agent-1:
@@ -75,6 +76,7 @@ services:
       - AGENT_PORT=7788
       - TOPIC_PUB=account
       - TOPIC_SUB=balance
+      - INTERVAL=100
     networks:
       agent-net:
 networks:
