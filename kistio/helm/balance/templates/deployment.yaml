@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "balance.fullname" . }}
+  labels:
+    {{- include "balance.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "balance.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "balance.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "balance.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: kistio-agent
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: h0n9/kistio-agent
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: quic
+              containerPort: 7780
+              protocol: UDP
+            - name: grpc
+              containerPort: 7788
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: LISTENS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "balance.fullname" . }}
+                  key: listens
+            - name: BOOTSTRAPS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "balance.fullname" . }}
+                  key: bootstraps
+          readinessProbe:
+            exec:
+              command: ["/bin/grpc_health_probe", "-addr=:7788"]
+            initialDelaySeconds: 3
+          livenessProbe:
+            exec:
+              command: ["/bin/grpc_health_probe", "-addr=:7788"]
+            initialDelaySeconds: 3
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: AGENT_HOST
+              value: "127.0.0.1"
+            - name: AGENT_PORT
+              value: "7788"
+            - name: TOPIC_PUB
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "balance.fullname" . }}
+                  key: topic-pub
+            - name: TOPIC_SUB
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "balance.fullname" . }}
+                  key: topic-sub
+            - name: INTERVAL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "balance.fullname" . }}
+                  key: interval
+          command: ["/bin/sh"]
+          args: ["-c", "sleep 5s && docker-entrypoint.sh"]
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
