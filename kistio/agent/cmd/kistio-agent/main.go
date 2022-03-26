@@ -62,9 +62,9 @@ func main() {
 		sig := <-sigs // block until signal
 		fmt.Printf("\nRECEIVED SIGNAL: %s\n", sig)
 
-		cancel()               // cancel context
 		grpcSrv.GracefulStop() // gracefully stop grpcServer
 		kistioSrv.Close()      // close kistioServer
+		cancel()               // cancel context
 		node.Close()           // close node
 		if err != nil {
 			fmt.Println(err)
