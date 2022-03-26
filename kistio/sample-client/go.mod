@@ -3,7 +3,7 @@ module github.com/h0n9/toybox/kistio/sample-client
 go 1.17
 
 require (
-	github.com/h0n9/toybox/kistio/proto v0.0.0-20220326122449-87441f20c32e
+	github.com/h0n9/toybox/kistio/proto v0.0.0-20220326132529-71fda1c01c78
 	google.golang.org/grpc v1.45.0
 )
 

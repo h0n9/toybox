@@ -13,6 +13,7 @@ import (
 	"github.com/h0n9/toybox/kistio/agent/util"
 	pb "github.com/h0n9/toybox/kistio/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 func main() {
@@ -40,14 +41,16 @@ func main() {
 	fmt.Println(node.Info())
 
 	// init server(handler)
-	srv := server.NewKistioServer(node)
+	kistioSrv := server.NewKistioServer(node)
+	healthCheckerSrv := server.NewHealthChecker()
 
 	// init grpcServer
 	opts := []grpc.ServerOption{}
 	grpcSrv := grpc.NewServer(opts...)
 
 	// register server(handler) to grpcServer
-	pb.RegisterKistioServer(grpcSrv, srv)
+	pb.RegisterKistioServer(grpcSrv, kistioSrv)
+	grpc_health_v1.RegisterHealthServer(grpcSrv, healthCheckerSrv)
 
 	// start grpcServer
 	listener, err := net.Listen("tcp", cfg.GrpcListen)

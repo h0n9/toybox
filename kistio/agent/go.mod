@@ -3,7 +3,7 @@ module github.com/h0n9/toybox/kistio/agent
 go 1.17
 
 require (
-	github.com/h0n9/toybox/kistio/proto v0.0.0-20220326122449-87441f20c32e
+	github.com/h0n9/toybox/kistio/proto v0.0.0-20220326132529-71fda1c01c78
 	github.com/libp2p/go-libp2p v0.18.0
 	github.com/libp2p/go-libp2p-core v0.14.0
 	github.com/libp2p/go-libp2p-discovery v0.6.0
