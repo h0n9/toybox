@@ -1,7 +1,5 @@
 syntax = "proto3";
 
-package grpc.health.v1;
-
 option go_package = "github.com/h0n9/toybox/kistio/proto";
 
 service kistio {
@@ -25,24 +23,5 @@ message SubscribeRequest {
 
 message SubscribeResponse {
     bytes data = 1;
-}
-
-message HealthCheckRequest {
-  string service = 1;
-}
-
-message HealthCheckResponse {
-  enum ServingStatus {
-    UNKNOWN = 0;
-    SERVING = 1;
-    NOT_SERVING = 2;
-    SERVICE_UNKNOWN = 3;  // Used only by the Watch method.
-  }
-  ServingStatus status = 1;
-}
-
-service Health {
-  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
-  rpc Watch(HealthCheckRequest) returns (stream HealthCheckResponse);
 }
 
