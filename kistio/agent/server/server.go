@@ -25,6 +25,22 @@ func NewKistioServer(node *p2p.Node) *KistioServer {
 	}
 }
 
+func (server *KistioServer) Close() {
+	keys := make([]string, 0, len(server.topics))
+	for topic := range server.topics {
+		keys = append(keys, topic)
+	}
+	for _, key := range keys {
+		tp := server.topics[key]
+		fmt.Println("close topic:", key)
+		err := tp.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
+		delete(server.topics, key)
+	}
+}
+
 func (server *KistioServer) getTopic(name string) (*pubsub.Topic, error) {
 	topic, exist := server.topics[name]
 	if !exist {

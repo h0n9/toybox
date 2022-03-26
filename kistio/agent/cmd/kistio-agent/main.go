@@ -64,7 +64,8 @@ func main() {
 
 		cancel()               // cancel context
 		grpcSrv.GracefulStop() // gracefully stop grpcServer
-		err = node.Close()     // close node
+		kistioSrv.Close()      // close kistioServer
+		node.Close()           // close node
 		if err != nil {
 			fmt.Println(err)
 		}
