@@ -55,6 +55,14 @@ spec:
                 configMapKeyRef:
                   name: {{ include "kistio-center.fullname" . }}
                   key: enable-dht-server
+          readinessProbe:
+            exec:
+              command: ["/bin/grpc_health_probe", "-addr=:7788"]
+            initialDelaySeconds: 3
+          livenessProbe:
+            exec:
+              command: ["/bin/grpc_health_probe", "-addr=:7788"]
+            initialDelaySeconds: 3
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

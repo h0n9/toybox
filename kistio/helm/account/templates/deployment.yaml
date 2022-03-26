@@ -37,6 +37,9 @@ spec:
             - name: quic
               containerPort: 7780
               protocol: UDP
+            - name: grpc
+              containerPort: 7788
+              protocol: TCP
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           env:
@@ -50,22 +53,26 @@ spec:
                 configMapKeyRef:
                   name: {{ include "account.fullname" . }}
                   key: bootstraps
+          readinessProbe:
+            exec:
+              command: ["/bin/grpc_health_probe", "-addr=:7788"]
+            initialDelaySeconds: 3
+          livenessProbe:
+            exec:
+              command: ["/bin/grpc_health_probe", "-addr=:7788"]
+            initialDelaySeconds: 3
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          ports:
-            - name: grpc
-              containerPort: 7788
-              protocol: TCP
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           env:
             - name: AGENT_HOST
               value: "127.0.0.1"
             - name: AGENT_PORT
-              value: "7780"
+              value: "7788"
             - name: TOPIC_PUB
               valueFrom:
                 configMapKeyRef:
@@ -81,6 +88,8 @@ spec:
                 configMapKeyRef:
                   name: {{ include "account.fullname" . }}
                   key: interval
+          command: ["/bin/sh"]
+          args: ["-c", "sleep 5s && docker-entrypoint.sh"]
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

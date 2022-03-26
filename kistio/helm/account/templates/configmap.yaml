@@ -9,4 +9,4 @@ data:
   bootstraps: /ip4/192.168.136.65/udp/7780/quic/p2p/QmcrAKUhzGuxN8oBJkDHGHnvGr7KVspp1SPA4vVAZBP7LF
   topic-pub: balance
   topic-sub: account
-  interval: "10"
+  interval: "1000"
