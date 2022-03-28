@@ -16,8 +16,8 @@ run-agent:
 docker: docker-build
 
 docker-push:
-	@docker push h0n9/kistio-agent
+	@docker push ghcr.io/h0n9/kistio-agent
 
 docker-build:
-	@docker build -t h0n9/kistio-agent .
+	@docker build -t ghcr.io/h0n9/kistio-agent .
 
