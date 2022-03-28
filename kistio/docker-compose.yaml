@@ -2,7 +2,8 @@ version: "3.8"
 name: kistio
 services:
   agent-ha-0: # seed
-    image: h0n9/kistio-agent:latest
+    build:
+      context: ./agent
     environment:
       - LISTENS=/ip4/0.0.0.0/udp/7780/quic
       - SEED=test-0
@@ -12,7 +13,8 @@ services:
   agent-ha-1:
     depends_on:
       - agent-ha-0
-    image: h0n9/kistio-agent:latest
+    build:
+      context: ./agent
     environment:
       - LISTENS=/ip4/0.0.0.0/udp/7780/quic
       - BOOTSTRAPS=/dns4/agent-ha-0/udp/7780/quic/p2p/QmbXyJsL3wnWa864f3GLv8bno2KhC6kRA2d3akVETLEfPo
@@ -23,7 +25,8 @@ services:
   agent-ha-2:
     depends_on:
       - agent-ha-0
-    image: h0n9/kistio-agent:latest
+    build:
+      context: ./agent
     environment:
       - LISTENS=/ip4/0.0.0.0/udp/7780/quic
       - BOOTSTRAPS=/dns4/agent-ha-0/udp/7780/quic/p2p/QmbXyJsL3wnWa864f3GLv8bno2KhC6kRA2d3akVETLEfPo
@@ -34,7 +37,8 @@ services:
   agent-0:
     depends_on:
       - agent-ha-0
-    image: h0n9/kistio-agent:latest
+    build:
+      context: ./agent
     environment:
       - LISTENS=/ip4/0.0.0.0/udp/7780/quic
       - BOOTSTRAPS=/dns4/agent-ha-0/udp/7780/quic/p2p/QmbXyJsL3wnWa864f3GLv8bno2KhC6kRA2d3akVETLEfPo
@@ -45,7 +49,8 @@ services:
   client-0:
     depends_on:
       - agent-0
-    image: sample-client:latest
+    build:
+      context: ./sample-client
     environment:
       - AGENT_HOST=agent-0
       - AGENT_PORT=7788
@@ -57,7 +62,8 @@ services:
   agent-1:
     depends_on:
       - agent-ha-0
-    image: h0n9/kistio-agent:latest
+    build:
+      context: ./agent
     environment:
       - LISTENS=/ip4/0.0.0.0/udp/7780/quic
       - BOOTSTRAPS=/dns4/agent-ha-0/udp/7780/quic/p2p/QmbXyJsL3wnWa864f3GLv8bno2KhC6kRA2d3akVETLEfPo
@@ -68,7 +74,8 @@ services:
   client-1:
     depends_on:
       - agent-1
-    image: sample-client:latest
+    build:
+      context: ./sample-client
     environment:
       - AGENT_HOST=agent-1
       - AGENT_PORT=7788
