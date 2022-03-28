@@ -13,13 +13,11 @@ run: run-agent
 run-agent:
 	@./kistio-agent --seed test
 
-docker: docker-build docker-run
-
-docker-build:
-	@docker build -t h0n9/kistio-agent .
+docker: docker-build
 
 docker-push:
 	@docker push h0n9/kistio-agent
 
-docker-run:
-	@docker-compose up; docker-compose down
+docker-build:
+	@docker build -t h0n9/kistio-agent .
+
