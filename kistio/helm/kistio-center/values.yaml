@@ -5,7 +5,7 @@
 replicaCount: 1
 
 image:
-  repository: h0n9/kistio-agent
+  repository: ghcr.io/h0n9/kistio-agent
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tag: latest
