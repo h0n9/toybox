@@ -30,9 +30,10 @@ const (
 )
 
 type Msg struct {
-	Sender   string `json:"sender"`
-	Data     []byte `json:"data"`
-	Metadata []byte `json:"metadata"`
+	Timestamp string `json:"timestamp"`
+	Sender    string `json:"sender"`
+	Data      []byte `json:"data"`
+	Metadata  []byte `json:"metadata"`
 }
 
 func main() {
@@ -88,9 +89,9 @@ func main() {
 			case <-ticker.C:
 				// init msg to send
 				msg := Msg{
-					Sender:   *topicSub,
-					Data:     []byte("I'd like to buy an apple"),
-					Metadata: []byte(time.Now().String()),
+					Timestamp: time.Now().String(),
+					Sender:    *topicSub,
+					Data:      []byte("I'd like to buy an apple"),
 				}
 				data, err := json.Marshal(msg)
 				if err != nil {
