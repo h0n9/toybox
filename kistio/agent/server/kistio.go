@@ -76,11 +76,15 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 	// check
 	tpName := req.GetTopic()
 
+	// gossip consumer
+	// go server.gossipConsumer(tpName)
+
 	// execute
 	tp, err := server.getTopic(tpName)
 	if err != nil {
 		return err
 	}
+	defer tp.Close()
 	sub, err := tp.Subscribe()
 	if err != nil {
 		return err
@@ -99,4 +103,14 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 			return err
 		}
 	}
+}
+
+func (server *KistioServer) gossipConsumer(tpName string) {
+	tpGCName := fmt.Sprintf("%s-%s-%s", tpName, "gossip", "consumer")
+	tpGC, err := server.getTopic(tpGCName)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer tpGC.Close()
 }
