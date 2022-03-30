@@ -2,6 +2,7 @@ version: "3.8"
 name: kistio
 services:
   agent-ha-0: # seed
+    image: ghcr.io/h0n9/kistio-agent
     build:
       context: ./agent
     environment:
@@ -13,6 +14,7 @@ services:
   agent-ha-1:
     depends_on:
       - agent-ha-0
+    image: ghcr.io/h0n9/kistio-agent
     build:
       context: ./agent
     environment:
@@ -25,6 +27,7 @@ services:
   agent-ha-2:
     depends_on:
       - agent-ha-0
+    image: ghcr.io/h0n9/kistio-agent
     build:
       context: ./agent
     environment:
@@ -37,6 +40,7 @@ services:
   agent-0:
     depends_on:
       - agent-ha-0
+    image: ghcr.io/h0n9/kistio-agent
     build:
       context: ./agent
     environment:
@@ -49,6 +53,7 @@ services:
   client-0:
     depends_on:
       - agent-0
+    image: ghcr.io/h0n9/sample-client
     build:
       context: ./sample-client
     environment:
@@ -56,12 +61,13 @@ services:
       - AGENT_PORT=7788
       - TOPIC_PUB=balance
       - TOPIC_SUB=account
-      - INTERVAL=10
+      - INTERVAL=1000
     networks:
       agent-net:
   agent-1:
     depends_on:
       - agent-ha-0
+    image: ghcr.io/h0n9/kistio-agent
     build:
       context: ./agent
     environment:
@@ -74,6 +80,7 @@ services:
   client-1:
     depends_on:
       - agent-1
+    image: ghcr.io/h0n9/sample-client
     build:
       context: ./sample-client
     environment:
@@ -81,7 +88,7 @@ services:
       - AGENT_PORT=7788
       - TOPIC_PUB=account
       - TOPIC_SUB=balance
-      - INTERVAL=10
+      - INTERVAL=1000
     networks:
       agent-net:
 networks:

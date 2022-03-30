@@ -1,7 +1,11 @@
-all: docker
+all: build run
 
-docker: docker-run
+build:
+	@docker-compose build
 
-docker-run:
+run:
 	@docker-compose up; docker-compose down
+
+push:
+	@docker-compose push agent-0 client-0
 
