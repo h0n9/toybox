@@ -4,53 +4,62 @@ import (
 	"context"
 	"fmt"
 
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
-
 	"github.com/h0n9/toybox/kistio/agent/p2p"
 	pb "github.com/h0n9/toybox/kistio/proto"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
 
 type KistioServer struct {
 	pb.UnimplementedKistioServer
 
-	topics map[string]*pubsub.Topic
-	node   *p2p.Node
+	topicStates map[string]*TopicState
+	node        *p2p.Node
 }
 
 func NewKistioServer(node *p2p.Node) *KistioServer {
 	return &KistioServer{
-		node:   node,
-		topics: make(map[string]*pubsub.Topic),
+		node:        node,
+		topicStates: make(map[string]*TopicState),
 	}
 }
 
 func (server *KistioServer) Close() {
-	keys := make([]string, 0, len(server.topics))
-	for topic := range server.topics {
+	keys := make([]string, 0, len(server.topicStates))
+	for topic := range server.topicStates {
 		keys = append(keys, topic)
 	}
 	for _, key := range keys {
-		tp := server.topics[key]
-		fmt.Println("close topic:", key)
+		tp := server.topicStates[key]
 		err := tp.Close()
 		if err != nil {
 			fmt.Println(err)
 		}
-		delete(server.topics, key)
+		delete(server.topicStates, key)
 	}
 }
 
-func (server *KistioServer) getTopic(name string) (*pubsub.Topic, error) {
-	topic, exist := server.topics[name]
+func (server *KistioServer) getTopicState(name string, consume bool) (*TopicState, error) {
+	ts, exist := server.topicStates[name]
 	if !exist {
-		tmp, err := server.node.Join(name)
+		topic, err := server.node.Join(name)
 		if err != nil {
 			return nil, err
 		}
-		server.topics[name] = tmp
-		topic = tmp
+		var gossipTopic *pubsub.Topic = nil
+		if consume {
+			gossipTopic, err = server.node.Join(fmt.Sprintf("%s-%s", topic.String(), PostfixGossipTopic))
+			if err != nil {
+				return nil, err
+			}
+		}
+		tmp, err := NewTopicState(topic, gossipTopic, server.node.GetHostID())
+		if err != nil {
+			return nil, err
+		}
+		server.topicStates[name] = tmp
+		ts = tmp
 	}
-	return topic, nil
+	return ts, nil
 }
 
 func (server *KistioServer) Publish(ctx context.Context, req *pb.PublishRequest) (*pb.PublishResponse, error) {
@@ -59,15 +68,14 @@ func (server *KistioServer) Publish(ctx context.Context, req *pb.PublishRequest)
 	data := req.GetData()
 
 	// execute
-	tp, err := server.getTopic(tpName)
+	ts, err := server.getTopicState(tpName, false)
 	if err != nil {
 		return nil, err
 	}
-	err = tp.Publish(ctx, data)
+	err = ts.topic.Publish(ctx, data)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("# of topic peers:", len(tp.ListPeers()))
 	// fmt.Printf("server-pub: %s\n", data)
 	return &pb.PublishResponse{Ok: true}, nil
 }
@@ -76,21 +84,35 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 	// check
 	tpName := req.GetTopic()
 
-	// gossip consumer
-	// go server.gossipConsumer(tpName)
-
 	// execute
-	tp, err := server.getTopic(tpName)
+	ts, err := server.getTopicState(tpName, true)
 	if err != nil {
 		return err
 	}
-	defer tp.Close()
-	sub, err := tp.Subscribe()
+	defer ts.Close()
+	sub, err := ts.topic.Subscribe()
 	if err != nil {
 		return err
 	}
 	defer sub.Cancel()
+	subConsumer, err := ts.topicConsumer.Subscribe()
+	if err != nil {
+		return err
+	}
+	defer subConsumer.Cancel()
+
 	ctx := stream.Context()
+
+	//ts.topicConsumer.EventHandler(func(t *pubsub.TopicEventHandler) error {
+	//	for {
+	//		peerEvent, err := t.NextPeerEvent(ctx)
+	//		if err != nil {
+	//			return err
+	//		}
+	//		fmt.Println(peerEvent)
+	//	}
+	//})
+
 	for {
 		msg, err := sub.Next(ctx)
 		if err != nil {
@@ -103,14 +125,4 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 			return err
 		}
 	}
-}
-
-func (server *KistioServer) gossipConsumer(tpName string) {
-	tpGCName := fmt.Sprintf("%s-%s-%s", tpName, "gossip", "consumer")
-	tpGC, err := server.getTopic(tpGCName)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer tpGC.Close()
 }
