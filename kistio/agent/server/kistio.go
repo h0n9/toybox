@@ -103,15 +103,21 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 
 	ctx := stream.Context()
 
-	//ts.topicConsumer.EventHandler(func(t *pubsub.TopicEventHandler) error {
-	//	for {
-	//		peerEvent, err := t.NextPeerEvent(ctx)
-	//		if err != nil {
-	//			return err
-	//		}
-	//		fmt.Println(peerEvent)
-	//	}
-	//})
+	eh, err := ts.topicConsumer.EventHandler()
+	if err != nil {
+		fmt.Println(err)
+	}
+	go func() {
+		defer eh.Cancel()
+		for {
+			e, err := eh.NextPeerEvent(ctx)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			fmt.Println(e)
+		}
+	}()
 
 	for {
 		msg, err := sub.Next(ctx)
