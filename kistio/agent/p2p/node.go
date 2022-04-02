@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/h0n9/toybox/kistio/agent/util"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -51,7 +52,9 @@ func NewNode(ctx context.Context, cfg *util.Config) (*Node, error) {
 	}
 
 	// init peer discovery alg.
-	dhtOptions := []dht.Option{}
+	dhtOptions := []dht.Option{
+		dht.RoutingTableRefreshQueryTimeout(100 * time.Millisecond),
+	}
 	if len(cfg.NodeBootstraps) == 0 || cfg.EnableDHTServer {
 		dhtOptions = append(dhtOptions, dht.Mode(dht.ModeServer))
 	}

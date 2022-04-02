@@ -14,7 +14,8 @@ import (
 )
 
 func (n *Node) connectPeerInfo(pi peer.AddrInfo) error {
-	if n.host.Network().Connectedness(pi.ID) == network.Connected {
+	c := n.host.Network().Connectedness(pi.ID)
+	if c == network.Connected || c == network.CannotConnect {
 		return nil
 	}
 	err := n.host.Connect(n.ctx, pi)
