@@ -34,13 +34,15 @@ func NewTopicState(topic, topicConsumer *pubsub.Topic, myID peer.ID) (*TopicStat
 }
 
 func (ts *TopicState) Close() error {
-	fmt.Println("close topic:", ts.topicConsumer.String())
-	err := ts.topicConsumer.Close()
-	if err != nil {
-		return err
+	if ts.topicConsumer != nil {
+		fmt.Println("close topic:", ts.topicConsumer.String())
+		err := ts.topicConsumer.Close()
+		if err != nil {
+			return err
+		}
 	}
 	fmt.Println("close topic consumer:", ts.topic.String())
-	err = ts.topic.Close()
+	err := ts.topic.Close()
 	if err != nil {
 		return err
 	}

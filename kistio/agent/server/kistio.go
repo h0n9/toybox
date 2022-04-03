@@ -25,12 +25,13 @@ func NewKistioServer(node *p2p.Node) *KistioServer {
 
 func (server *KistioServer) Close() {
 	keys := make([]string, 0, len(server.topicStates))
-	for topic := range server.topicStates {
-		keys = append(keys, topic)
+	for ts := range server.topicStates {
+		keys = append(keys, ts)
 	}
+	fmt.Println("closing topicStates:", keys)
 	for _, key := range keys {
-		tp := server.topicStates[key]
-		err := tp.Close()
+		ts := server.topicStates[key]
+		err := ts.Close()
 		if err != nil {
 			fmt.Println(err)
 		}
