@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/h0n9/toybox/kistio/agent/p2p"
 	pb "github.com/h0n9/toybox/kistio/proto"
@@ -108,28 +109,55 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 	if err != nil {
 		fmt.Println(err)
 	}
+	defer eh.Cancel()
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
 	go func() {
-		defer eh.Cancel()
+		defer wg.Done()
 		for {
-			e, err := eh.NextPeerEvent(ctx)
-			if err != nil {
-				fmt.Println(err)
+			select {
+			case <-ctx.Done():
 				return
+			default:
+				e, err := eh.NextPeerEvent(ctx)
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+				fmt.Println(e)
 			}
-			fmt.Println(e)
 		}
 	}()
 
-	for {
-		msg, err := sub.Next(ctx)
-		if err != nil {
-			return err
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				msg, err := sub.Next(ctx)
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+				data := msg.GetData()
+				// fmt.Printf("server-sub: %s\n", data)
+				err = stream.Send(&pb.SubscribeResponse{Data: data})
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+			}
 		}
-		data := msg.GetData()
-		// fmt.Printf("server-sub: %s\n", data)
-		err = stream.Send(&pb.SubscribeResponse{Data: data})
-		if err != nil {
-			return err
-		}
-	}
+	}()
+
+	wg.Wait()
+
+	fmt.Println("end of subscription:", tpName)
+
+	return nil
 }
