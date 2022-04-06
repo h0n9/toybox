@@ -103,7 +103,8 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 	}
 	defer subConsumer.Cancel()
 
-	ctx := stream.Context()
+	nodeCtx := server.node.Context()
+	streamCtx := stream.Context()
 
 	eh, err := ts.topicConsumer.EventHandler()
 	if err != nil {
