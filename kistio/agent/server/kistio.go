@@ -118,10 +118,12 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 		defer wg.Done()
 		for {
 			select {
-			case <-ctx.Done():
+			case <-nodeCtx.Done():
+				return
+			case <-streamCtx.Done():
 				return
 			default:
-				e, err := eh.NextPeerEvent(ctx)
+				e, err := eh.NextPeerEvent(streamCtx)
 				if err != nil {
 					fmt.Println(err)
 					return
@@ -136,10 +138,12 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 		defer wg.Done()
 		for {
 			select {
-			case <-ctx.Done():
+			case <-nodeCtx.Done():
+				return
+			case <-streamCtx.Done():
 				return
 			default:
-				msg, err := sub.Next(ctx)
+				msg, err := sub.Next(streamCtx)
 				if err != nil {
 					fmt.Println(err)
 					return

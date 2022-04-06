@@ -72,6 +72,10 @@ func NewNode(ctx context.Context, cfg *util.Config) (*Node, error) {
 	return &node, nil
 }
 
+func (n *Node) Context() context.Context {
+	return n.ctx
+}
+
 func (n *Node) Close() error {
 	return n.host.Close()
 }
