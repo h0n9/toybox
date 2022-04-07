@@ -15,16 +15,19 @@ type KistioServer struct {
 
 	topicStates map[string]*TopicState
 	node        *p2p.Node
+	subWg       sync.WaitGroup
 }
 
 func NewKistioServer(node *p2p.Node) *KistioServer {
 	return &KistioServer{
-		node:        node,
 		topicStates: make(map[string]*TopicState),
+		node:        node,
+		subWg:       sync.WaitGroup{},
 	}
 }
 
 func (server *KistioServer) Close() {
+	server.subWg.Wait()
 	keys := make([]string, 0, len(server.topicStates))
 	for ts := range server.topicStates {
 		keys = append(keys, ts)
@@ -83,6 +86,9 @@ func (server *KistioServer) Publish(ctx context.Context, req *pb.PublishRequest)
 }
 
 func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio_SubscribeServer) error {
+	server.subWg.Add(1)
+	defer server.subWg.Done()
+
 	// check
 	tpName := req.GetTopic()
 
