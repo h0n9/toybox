@@ -1,5 +1,4 @@
 version: "3.8"
-name: kistio
 services:
   agent-ha-0: # seed
     image: ghcr.io/h0n9/kistio-agent
