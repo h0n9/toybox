@@ -59,31 +59,35 @@ func (n *Node) Bootstrap(bsNodes crypto.Addrs) error {
 func (n *Node) Discover(rendezVous string) error {
 	// advertise rendez-vous annoucement
 	routingDiscovery := discovery.NewRoutingDiscovery(n.peerDiscovery)
-	discovery.Advertise(n.ctx, routingDiscovery, rendezVous)
+	backoffDiscovery, err := discovery.NewBackoffDiscovery(routingDiscovery, discovery.NewFixedBackoff(1*time.Second))
+	if err != nil {
+		return err
+	}
 
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
+	go backoffDiscovery.Advertise(n.ctx, rendezVous)
 
-	for {
-		select {
-		case <-n.ctx.Done():
-			fmt.Println("stop discovering peers")
-			return nil
-		case <-ticker.C:
-			pis, err := discovery.FindPeers(n.ctx, routingDiscovery, rendezVous)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-			for _, pi := range pis {
-				if pi.ID == n.GetHostID() {
+	go func() {
+		peerCh, err := backoffDiscovery.FindPeers(n.ctx, rendezVous)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		for {
+			select {
+			case <-n.ctx.Done():
+				fmt.Println("stop discovering peers")
+			case peer := <-peerCh:
+				if peer.ID == n.GetHostID() || peer.ID == "" {
 					continue
 				}
-				err := n.connectPeerInfo(pi)
+				err := n.connectPeerInfo(peer)
 				if err != nil {
 					fmt.Println(err)
 				}
 			}
 		}
-	}
+	}()
+
+	return nil
 }
