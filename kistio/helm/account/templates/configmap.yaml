@@ -9,4 +9,4 @@ data:
   bootstraps: /dns4/kistio-center.kistio/udp/7780/quic/p2p/QmcrAKUhzGuxN8oBJkDHGHnvGr7KVspp1SPA4vVAZBP7LF
   topic-pub: balance
   topic-sub: account
-  interval: "100"
+  interval: "1000"
