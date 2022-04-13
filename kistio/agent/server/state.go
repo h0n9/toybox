@@ -41,7 +41,7 @@ func (ts *TopicState) Close() error {
 			return err
 		}
 	}
-	fmt.Println("close topic consumer:", ts.topic.String())
+	fmt.Println("close topic:", ts.topic.String())
 	err := ts.topic.Close()
 	if err != nil {
 		return err

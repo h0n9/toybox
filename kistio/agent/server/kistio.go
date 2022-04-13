@@ -109,7 +109,6 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 	}
 	defer subConsumer.Cancel()
 
-	nodeCtx := server.node.Context()
 	streamCtx := stream.Context()
 
 	eh, err := ts.topicConsumer.EventHandler()
@@ -124,19 +123,12 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 	go func() {
 		defer wg.Done()
 		for {
-			select {
-			case <-nodeCtx.Done():
+			e, err := eh.NextPeerEvent(streamCtx)
+			if err != nil {
+				fmt.Println(err)
 				return
-			case <-streamCtx.Done():
-				return
-			default:
-				e, err := eh.NextPeerEvent(streamCtx)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-				fmt.Println(e)
 			}
+			fmt.Println(e, ts.topicConsumer.ListPeers())
 		}
 	}()
 
@@ -144,24 +136,15 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 	go func() {
 		defer wg.Done()
 		for {
-			select {
-			case <-nodeCtx.Done():
+			msg, err := sub.Next(streamCtx)
+			if err != nil {
+				fmt.Println(err)
 				return
-			case <-streamCtx.Done():
+			}
+			err = stream.Send(&pb.SubscribeResponse{Data: msg.GetData()})
+			if err != nil {
+				fmt.Println(err)
 				return
-			default:
-				msg, err := sub.Next(streamCtx)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-				data := msg.GetData()
-				// fmt.Printf("server-sub: %s\n", data)
-				err = stream.Send(&pb.SubscribeResponse{Data: data})
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
 			}
 		}
 	}()

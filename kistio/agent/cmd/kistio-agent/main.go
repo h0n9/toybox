@@ -66,19 +66,24 @@ func main() {
 		sig := <-sigs // block until signal
 		fmt.Printf("\nRECEIVED SIGNAL: %s\n", sig)
 
-		kistioSrv.Close()      // close kistioServer
-		cancel()               // cancel context
 		grpcSrv.GracefulStop() // gracefully stop grpcServer
-		node.Close()           // close node
+		kistioSrv.Close()      // close kistioServer
+		err = node.Close()     // close node
 		if err != nil {
 			fmt.Println(err)
 		}
+		cancel() // cancel context
+		fmt.Println("-------------- closed all --------------")
 	}()
 
-	err = grpcSrv.Serve(listener)
-	if err != nil {
-		panic(err)
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err = grpcSrv.Serve(listener)
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	wg.Wait()
 }
