@@ -53,6 +53,13 @@ spec:
                 configMapKeyRef:
                   name: {{ include "balance.fullname" . }}
                   key: bootstraps
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - "/bin/sh"
+                  - "-c"
+                  - "until /bin/grpc_health_probe -addr=:7788; do sleep 3s; done;"
           readinessProbe:
             exec:
               command: ["/bin/grpc_health_probe", "-addr=:7788"]
@@ -88,8 +95,6 @@ spec:
                 configMapKeyRef:
                   name: {{ include "balance.fullname" . }}
                   key: interval
-          command: ["/bin/sh"]
-          args: ["-c", "sleep 5s && docker-entrypoint.sh"]
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
