@@ -77,6 +77,7 @@ func (n *Node) Discover(rendezVous string) error {
 			select {
 			case <-n.ctx.Done():
 				fmt.Println("stop discovering peers")
+				return
 			case peer := <-peerCh:
 				if peer.ID == n.GetHostID() || peer.ID == "" {
 					continue

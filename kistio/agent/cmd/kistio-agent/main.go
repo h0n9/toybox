@@ -6,7 +6,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
 	"github.com/h0n9/toybox/kistio/agent/p2p"
@@ -24,6 +23,10 @@ func main() {
 	cfg.ParseFlags()
 
 	sigs := make(chan os.Signal, 1)
+	defer close(sigs)
+	done := make(chan bool, 1)
+	defer close(done)
+
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	// init node
@@ -59,10 +62,7 @@ func main() {
 		panic(err)
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
 		sig := <-sigs // block until signal
 		fmt.Printf("\nRECEIVED SIGNAL: %s\n", sig)
 
@@ -74,16 +74,15 @@ func main() {
 		}
 		cancel() // cancel context
 		fmt.Println("-------------- closed all --------------")
+		done <- true
 	}()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err = grpcSrv.Serve(listener)
-		if err != nil {
-			panic(err)
-		}
-	}()
+	err = grpcSrv.Serve(listener)
+	if err != nil {
+		panic(err)
+	}
 
-	wg.Wait()
+	<-done
+
+	fmt.Println("-------------- end of main --------------")
 }
