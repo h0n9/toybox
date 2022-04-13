@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	coreDiscovery "github.com/libp2p/go-libp2p-core/discovery"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	discovery "github.com/libp2p/go-libp2p-discovery"
@@ -64,10 +65,12 @@ func (n *Node) Discover(rendezVous string) error {
 		return err
 	}
 
-	go backoffDiscovery.Advertise(n.ctx, rendezVous)
+	opts := []coreDiscovery.Option{coreDiscovery.TTL(300 * time.Millisecond)}
+
+	go backoffDiscovery.Advertise(n.ctx, rendezVous, opts...)
 
 	go func() {
-		peerCh, err := backoffDiscovery.FindPeers(n.ctx, rendezVous)
+		peerCh, err := backoffDiscovery.FindPeers(n.ctx, rendezVous, opts...)
 		if err != nil {
 			fmt.Println(err)
 			return
