@@ -18,7 +18,7 @@ type TopicState struct {
 	topicConsumer *pubsub.Topic
 
 	myID            peer.ID
-	myPartition     int
+	myPartition     uint64
 	consumerPeerIDs []peer.ID
 }
 
@@ -62,7 +62,7 @@ func (ts *TopicState) Update() {
 	})
 	for i, peerID := range peerIDs {
 		if peerID == ts.myID {
-			ts.myPartition = i + 1
+			ts.myPartition = uint64(i + 1)
 			break
 		}
 	}

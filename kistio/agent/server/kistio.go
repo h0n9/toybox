@@ -109,6 +109,8 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 	}
 	defer subConsumer.Cancel()
 
+	ts.Update()
+
 	streamCtx := stream.Context()
 
 	eh, err := ts.topicConsumer.EventHandler()
@@ -129,6 +131,7 @@ func (server *KistioServer) Subscribe(req *pb.SubscribeRequest, stream pb.Kistio
 				return
 			}
 			fmt.Println(e, ts.topicConsumer.ListPeers())
+			ts.Update()
 		}
 	}()
 
