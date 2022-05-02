@@ -13,18 +13,18 @@ func Convert(fromFile io.Reader, toFile io.Writer, quality int) error {
 		return err
 	}
 
-	grayImg := image.NewGray(fromImg.Bounds())
+	toImg := image.NewGray(fromImg.Bounds())
 	for x := fromImg.Bounds().Min.X; x < fromImg.Bounds().Max.X; x++ {
 		for y := fromImg.Bounds().Min.Y; y < fromImg.Bounds().Max.Y; y++ {
-			grayImg.Set(x, y, fromImg.At(x, y))
+			toImg.Set(x, y, fromImg.At(x, y))
 		}
 	}
 
 	switch format {
 	case "jpeg":
-		err = jpeg.Encode(toFile, grayImg, &jpeg.Options{Quality: quality})
+		err = jpeg.Encode(toFile, toImg, &jpeg.Options{Quality: quality})
 	case "png":
-		err = png.Encode(toFile, grayImg)
+		err = png.Encode(toFile, toImg)
 	}
 	if err != nil {
 		return err
