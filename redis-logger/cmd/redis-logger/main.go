@@ -29,11 +29,12 @@ func main() {
 	fmt.Printf("GET hello -> ")
 	result, err = rdb.Get(ctx, "hello").Result()
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+	} else {
+		fmt.Println(result)
 	}
-	fmt.Println(result)
 
-	pubsub := rdb.Subscribe(ctx, "__key*__:*")
+	pubsub := rdb.PSubscribe(ctx, "__key*__:*")
 	defer pubsub.Close()
 
 	for {
@@ -41,6 +42,6 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(msg.Channel)
+		fmt.Println(msg.String())
 	}
 }
