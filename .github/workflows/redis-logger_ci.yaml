@@ -25,6 +25,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.img-registry }}/${{ env.img-repository }}:${GITHUB_REF/-redis-logger/''}
+          tags: ${{ env.img-registry }}/${{ env.img-repository }}:${GITHUB_REF/'-redis-logger'/''}
           cache-from: type=gha,scope=redis-logger
           cache-to: type=gha,mode=max,scope=redis-logger
