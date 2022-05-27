@@ -27,7 +27,7 @@ jobs:
       - name: Build Docker image
         uses: docker/build-push-action@v2
         with:
-          context: .
+          context: redis-logger/
           push: true
           tags: ${{ env.img-registry }}/${{ env.img-repository }}:${{ env.img-tag }}
           cache-from: type=gha,scope=redis-logger
