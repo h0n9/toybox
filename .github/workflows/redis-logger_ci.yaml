@@ -4,7 +4,7 @@ on:
     tags:
       - v*-redis-logger
 env:
-  img-registry: ghcr.io
+  img-registry: ghcr.io/h0n9
   img-repository: redis-logger
   img-tag: latest
 jobs:
