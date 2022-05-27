@@ -2,7 +2,7 @@ name: redis-logger ci
 on:
   push:
     tags:
-      - v*
+      - v*-redis-logger
 env:
   img-registry: ghcr.io
   img-repository: redis-logger
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v2t
+        uses: actions/checkout@v2
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Login to GitHub Container Registry
@@ -25,6 +25,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.img-registry }}/${{ env.img-repository }}:${{ github.ref_name }}
+          tags: ${{ env.img-registry }}/${{ env.img-repository }}:${GITHUB_REF/-redis-logger/''}
           cache-from: type=gha,scope=redis-logger
           cache-to: type=gha,mode=max,scope=redis-logger
