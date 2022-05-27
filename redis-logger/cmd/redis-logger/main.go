@@ -3,7 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -23,13 +27,31 @@ func main() {
 	addr := util.GetEnv("REDIS_ADDR", DefaultRedisAddr)
 	password := util.GetEnv("REDIS_PASSWORD", DefaultRedisPassword)
 
-	// init
-	ctx := context.Background()
+	// init context, waitGroup
+	ctx, cancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
+
+	// init signal handler
+	sigs := make(chan os.Signal, 1)
+	defer close(sigs)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	// init logger
 	logger := log.With().
 		Str("service", serviceName).
 		Str("redis-addr", addr).
 		Logger()
+
+	// wait signals
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		sig := <-sigs // block until signal
+		logger.Info().Msg(fmt.Sprintf("received SIGNAL: %s\n", sig.String()))
+		cancel()
+	}()
+
+	// init redis client
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: password,
@@ -45,38 +67,37 @@ func main() {
 	}
 	logger.Info().Msg(result)
 
-	// subscribe keyevent
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		pubsub := rdb.PSubscribe(ctx, "__keyevent*__:*")
-		defer pubsub.Close()
-
-		for {
-			msg, err := pubsub.ReceiveMessage(ctx)
-			if err != nil {
-				logger.Panic().Msg(err.Error())
-			}
-			logger.Info().Msg(msg.Channel)
-		}
-	}()
-
 	// get slowlogs
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		tick := time.Tick(1 * time.Second)
 
 		for {
-			slowlogs, err := rdb.SlowLogGet(ctx, 1).Result()
+			select {
+			case <-ctx.Done():
+				logger.Info().Msg("stop getting slowlogs")
+				return
+			case <-tick:
+			}
+			cmd := redis.NewSlowLogCmd(ctx, "slowlog", "get", 1)
+			rdb.Process(ctx, cmd)
+			slowlogs, err := cmd.Result()
 			if err != nil {
 				logger.Err(err)
 				continue
 			}
-			if len(slowlogs) < 1 {
-				continue
+			for _, slowlog := range slowlogs {
+				if strings.HasPrefix(slowlog.Args[0], "slowlog") {
+					continue
+				}
+				logger.Info().
+					Str("type", "SLOWLOG").
+					Str("client-addr", slowlog.ClientAddr).
+					Str("client-name", slowlog.ClientName).
+					Str("duration", slowlog.Duration.String()).
+					Msg(fmt.Sprint(slowlog.Args))
 			}
-			logger.Info().Msg(fmt.Sprint(slowlogs[0].Args))
 			time.Sleep(1 * time.Second)
 		}
 	}()
