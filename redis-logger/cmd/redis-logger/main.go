@@ -90,24 +90,24 @@ func main() {
 				logger.Info().Msg("stop getting slowlogs")
 				return
 			case <-tick:
-			}
-			cmd := redis.NewSlowLogCmd(ctx, "slowlog", "get", 1)
-			rdb.Process(ctx, cmd)
-			slowlogs, err := cmd.Result()
-			if err != nil {
-				logger.Err(err)
-				continue
-			}
-			for _, slowlog := range slowlogs {
-				if strings.HasPrefix(slowlog.Args[0], "slowlog") {
+				cmd := redis.NewSlowLogCmd(ctx, "slowlog", "get", 1)
+				rdb.Process(ctx, cmd)
+				slowlogs, err := cmd.Result()
+				if err != nil {
+					logger.Err(err)
 					continue
 				}
-				logger.Info().
-					Str("type", "SLOWLOG").
-					Str("client-addr", slowlog.ClientAddr).
-					Str("client-name", slowlog.ClientName).
-					Str("duration", slowlog.Duration.String()).
-					Msg(fmt.Sprint(slowlog.Args))
+				for _, slowlog := range slowlogs {
+					if strings.HasPrefix(slowlog.Args[0], "slowlog") {
+						continue
+					}
+					logger.Info().
+						Str("type", "SLOWLOG").
+						Str("client-addr", slowlog.ClientAddr).
+						Str("client-name", slowlog.ClientName).
+						Str("duration", slowlog.Duration.String()).
+						Msg(fmt.Sprint(slowlog.Args))
+				}
 			}
 		}
 	}()
