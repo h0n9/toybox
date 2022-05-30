@@ -25,12 +25,15 @@ const (
 	DefaultTimeInterval  = "1000ms"
 )
 
-var CmdsToIgnore = map[string]bool{
-	"slowlog": true,
-	"client":  true,
-	"auth":    true,
-	"ping":    true,
-}
+var (
+	CmdsToIgnore = map[string]bool{
+		"slowlog": true,
+		"client":  true,
+		"auth":    true,
+		"ping":    true,
+	}
+	RedisClientList = map[string]string{} // <client-ip>:<client-username>
+)
 
 func main() {
 	// get envs
@@ -95,21 +98,23 @@ func main() {
 	}
 	logger.Info().Msg(result)
 
+	// update client list
+	err = UpdateClientList(ctx, rdb)
+	if err != nil {
+		logger.Panic().Msg(err.Error())
+	}
+
 	// start datadog tracing if enabled
 	if datadogEnableTracing != "" {
 		tracer.Start()
 		defer tracer.Stop()
 	}
 
-	// global variables
-	clientList := map[string]string{} // <client-ip>:<client-username>
-
 	// get slowlogs
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		tick := time.Tick(timeInterval)
-
 		for {
 			select {
 			case <-ctx.Done():
@@ -136,9 +141,9 @@ func main() {
 						logger.Info().
 							Str("type", "SLOWLOG").
 							Str("client-addr", slowlog.ClientAddr).
-							Str("client-name", clientList[slowlog.ClientAddr]).
+							Str("client-name", RedisClientList[slowlog.ClientAddr]).
 							Str("duration", slowlog.Duration.String()).
-							Msg(fmt.Sprint(slowlog.Args))
+							Msg(strings.Join(slowlog.Args, " "))
 					}
 				}()
 			}
@@ -150,45 +155,51 @@ func main() {
 	go func() {
 		defer wg.Done()
 		tick := time.Tick(3000 * time.Millisecond)
-		cmd := rdb.ClientList(ctx)
-
 		for {
 			select {
 			case <-ctx.Done():
 				logger.Info().Msg("stop getting client list")
 				return
 			case <-tick:
-				rdb.Process(ctx, cmd)
-				result, err := cmd.Result()
+				err := UpdateClientList(ctx, rdb)
 				if err != nil {
 					logger.Err(err)
-					continue
-				}
-				// parse result
-				clients := strings.Split(result, "\n")
-				for _, client := range clients {
-					properties := strings.Split(client, " ")
-					clientIP := ""
-					clientUsername := ""
-					for _, property := range properties {
-						if len(clientIP) != 0 && len(clientUsername) != 0 {
-							break
-						}
-						tmp := strings.Split(property, "=")
-						if len(tmp) < 2 {
-							continue
-						}
-						if tmp[0] == "addr" {
-							clientIP = tmp[1]
-						} else if tmp[0] == "user" {
-							clientUsername = tmp[1]
-						}
-					}
-					clientList[clientIP] = clientUsername
 				}
 			}
 		}
 	}()
 
 	wg.Wait()
+}
+
+func UpdateClientList(ctx context.Context, rdb *redis.Client) error {
+	cmd := rdb.ClientList(ctx)
+	rdb.Process(ctx, cmd)
+	result, err := cmd.Result()
+	if err != nil {
+		return err
+	}
+	// parse result
+	clients := strings.Split(result, "\n")
+	for _, client := range clients {
+		properties := strings.Split(client, " ")
+		clientIP := ""
+		clientUsername := ""
+		for _, property := range properties {
+			if len(clientIP) != 0 && len(clientUsername) != 0 {
+				break
+			}
+			tmp := strings.Split(property, "=")
+			if len(tmp) < 2 {
+				continue
+			}
+			if tmp[0] == "addr" {
+				clientIP = tmp[1]
+			} else if tmp[0] == "user" {
+				clientUsername = tmp[1]
+			}
+		}
+		RedisClientList[clientIP] = clientUsername
+	}
+	return nil
 }
