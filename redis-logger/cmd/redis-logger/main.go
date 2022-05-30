@@ -128,7 +128,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		tick := time.Tick(1000 * time.Millisecond)
+		tick := time.Tick(3000 * time.Millisecond)
 		cmd := rdb.ClientList(ctx)
 
 		for {
@@ -147,11 +147,22 @@ func main() {
 				clients := strings.Split(result, "\n")
 				for _, client := range clients {
 					properties := strings.Split(client, " ")
-					if len(properties) < 27 {
-						continue
+					clientIP := ""
+					clientUsername := ""
+					for _, property := range properties {
+						if len(clientIP) != 0 && len(clientUsername) != 0 {
+							break
+						}
+						tmp := strings.Split(property, "=")
+						if len(tmp) < 2 {
+							continue
+						}
+						if tmp[0] == "addr" {
+							clientIP = tmp[1]
+						} else if tmp[0] == "user" {
+							clientUsername = tmp[1]
+						}
 					}
-					clientIP := strings.Split(properties[1], "=")[1]
-					clientUsername := strings.Split(properties[24], "=")[1]
 					clientList[clientIP] = clientUsername
 				}
 			}
