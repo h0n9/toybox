@@ -24,6 +24,13 @@ const (
 	DefaultTimeInterval  = "1000ms"
 )
 
+var CmdsToIgnore = map[string]bool{
+	"slowlog": true,
+	"client":  true,
+	"auth":    true,
+	"ping":    true,
+}
+
 func main() {
 	// get envs
 	serviceName := util.GetEnv("SERVICE_NAME", DefaultServiceName)
@@ -94,7 +101,6 @@ func main() {
 	go func() {
 		defer wg.Done()
 		tick := time.Tick(timeInterval)
-		cmd := redis.NewSlowLogCmd(ctx, "slowlog", "get", 1)
 
 		for {
 			select {
@@ -102,24 +108,31 @@ func main() {
 				logger.Info().Msg("stop getting slowlogs")
 				return
 			case <-tick:
-				rdb.Process(ctx, cmd)
-				slowlogs, err := cmd.Result()
-				if err != nil {
-					logger.Err(err)
-					continue
-				}
-				for _, slowlog := range slowlogs {
-					command := slowlog.Args[0]
-					if strings.HasPrefix(command, "slowlog") || strings.HasPrefix(command, "client") {
-						continue
+				go func() {
+					cmd := redis.NewSlowLogCmd(ctx, "slowlog", "get", 1)
+					err = rdb.Process(ctx, cmd)
+					if err != nil {
+						logger.Err(err)
+						return
 					}
-					logger.Info().
-						Str("type", "SLOWLOG").
-						Str("client-addr", slowlog.ClientAddr).
-						Str("client-name", clientList[slowlog.ClientAddr]).
-						Str("duration", slowlog.Duration.String()).
-						Msg(fmt.Sprint(slowlog.Args))
-				}
+					slowlogs, err := cmd.Result()
+					if err != nil {
+						logger.Err(err)
+						return
+					}
+					for _, slowlog := range slowlogs {
+						command := strings.ToLower(slowlog.Args[0])
+						if CmdsToIgnore[command] {
+							continue
+						}
+						logger.Info().
+							Str("type", "SLOWLOG").
+							Str("client-addr", slowlog.ClientAddr).
+							Str("client-name", clientList[slowlog.ClientAddr]).
+							Str("duration", slowlog.Duration.String()).
+							Msg(fmt.Sprint(slowlog.Args))
+					}
+				}()
 			}
 		}
 	}()
