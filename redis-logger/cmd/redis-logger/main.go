@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"os"
 	"os/signal"
@@ -18,14 +19,17 @@ import (
 const (
 	DefaultServiceName   = "redis-logger"
 	DefaultRedisAddr     = "localhost:6379"
+	DefaultRedisUsername = ""
 	DefaultRedisPassword = ""
 )
 
 func main() {
 	// get envs
 	serviceName := util.GetEnv("SERVICE_NAME", DefaultServiceName)
-	addr := util.GetEnv("REDIS_ADDR", DefaultRedisAddr)
-	password := util.GetEnv("REDIS_PASSWORD", DefaultRedisPassword)
+	redisAddr := util.GetEnv("REDIS_ADDR", DefaultRedisAddr)
+	redisUsername := util.GetEnv("REDIS_USERNAME", DefaultRedisUsername)
+	redisPassword := util.GetEnv("REDIS_PASSWORD", DefaultRedisPassword)
+	redisEnableTLS := util.GetEnv("REDIS_ENABLE_TLS", "")
 
 	// init context, waitGroup
 	ctx, cancel := context.WithCancel(context.Background())
@@ -39,7 +43,7 @@ func main() {
 	// init logger
 	logger := log.With().
 		Str("service", serviceName).
-		Str("redis-addr", addr).
+		Str("redis-addr", redisAddr).
 		Logger()
 
 	// wait signals
@@ -47,16 +51,23 @@ func main() {
 	go func() {
 		defer wg.Done()
 		sig := <-sigs // block until signal
-		logger.Info().Msg(fmt.Sprintf("received SIGNAL: %s\n", sig.String()))
+		logger.Info().Msg(fmt.Sprintf("received SIGNAL: %s", sig.String()))
 		cancel()
 	}()
 
 	// init redis client
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: password,
+	redisOpts := redis.Options{
+		Addr:     redisAddr,
+		Username: redisUsername,
+		Password: redisPassword,
 		DB:       0,
-	})
+	}
+	if redisEnableTLS != "" {
+		redisOpts.TLSConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+	}
+	rdb := redis.NewClient(&redisOpts)
 	defer rdb.Close()
 
 	// test connection
@@ -98,7 +109,6 @@ func main() {
 					Str("duration", slowlog.Duration.String()).
 					Msg(fmt.Sprint(slowlog.Args))
 			}
-			time.Sleep(1 * time.Second)
 		}
 	}()
 
