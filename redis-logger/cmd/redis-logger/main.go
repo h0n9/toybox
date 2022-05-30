@@ -21,6 +21,7 @@ const (
 	DefaultRedisAddr     = "localhost:6379"
 	DefaultRedisUsername = ""
 	DefaultRedisPassword = ""
+	DefaultTimeInterval  = "1000ms"
 )
 
 func main() {
@@ -30,6 +31,7 @@ func main() {
 	redisUsername := util.GetEnv("REDIS_USERNAME", DefaultRedisUsername)
 	redisPassword := util.GetEnv("REDIS_PASSWORD", DefaultRedisPassword)
 	redisEnableTLS := util.GetEnv("REDIS_ENABLE_TLS", "")
+	timeIntervalStr := util.GetEnv("TIME_INTERVAL", DefaultTimeInterval)
 
 	// init context, waitGroup
 	ctx, cancel := context.WithCancel(context.Background())
@@ -55,6 +57,12 @@ func main() {
 		cancel()
 	}()
 
+	// convert time interval string to int64
+	timeInterval, err := time.ParseDuration(timeIntervalStr)
+	if err != nil {
+		logger.Panic().Msg(err.Error())
+	}
+
 	// init redis client
 	redisOpts := redis.Options{
 		Addr:     redisAddr,
@@ -78,11 +86,15 @@ func main() {
 	}
 	logger.Info().Msg(result)
 
+	// global variables
+	clientList := map[string]string{} // <client-ip>:<client-username>
+
 	// get slowlogs
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		tick := time.Tick(1 * time.Second)
+		tick := time.Tick(timeInterval)
+		cmd := redis.NewSlowLogCmd(ctx, "slowlog", "get", 1)
 
 		for {
 			select {
@@ -90,7 +102,6 @@ func main() {
 				logger.Info().Msg("stop getting slowlogs")
 				return
 			case <-tick:
-				cmd := redis.NewSlowLogCmd(ctx, "slowlog", "get", 1)
 				rdb.Process(ctx, cmd)
 				slowlogs, err := cmd.Result()
 				if err != nil {
@@ -98,15 +109,50 @@ func main() {
 					continue
 				}
 				for _, slowlog := range slowlogs {
-					if strings.HasPrefix(slowlog.Args[0], "slowlog") {
+					command := slowlog.Args[0]
+					if strings.HasPrefix(command, "slowlog") || strings.HasPrefix(command, "client") {
 						continue
 					}
 					logger.Info().
 						Str("type", "SLOWLOG").
 						Str("client-addr", slowlog.ClientAddr).
-						Str("client-name", slowlog.ClientName).
+						Str("client-name", clientList[slowlog.ClientAddr]).
 						Str("duration", slowlog.Duration.String()).
 						Msg(fmt.Sprint(slowlog.Args))
+				}
+			}
+		}
+	}()
+
+	// get client list
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		tick := time.Tick(1000 * time.Millisecond)
+		cmd := rdb.ClientList(ctx)
+
+		for {
+			select {
+			case <-ctx.Done():
+				logger.Info().Msg("stop getting client list")
+				return
+			case <-tick:
+				rdb.Process(ctx, cmd)
+				result, err := cmd.Result()
+				if err != nil {
+					logger.Err(err)
+					continue
+				}
+				// parse result
+				clients := strings.Split(result, "\n")
+				for _, client := range clients {
+					properties := strings.Split(client, " ")
+					if len(properties) < 27 {
+						continue
+					}
+					clientIP := strings.Split(properties[1], "=")[1]
+					clientUsername := strings.Split(properties[24], "=")[1]
+					clientList[clientIP] = clientUsername
 				}
 			}
 		}
