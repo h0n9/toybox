@@ -14,7 +14,6 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/h0n9/toybox/redis-logger/util"
 	"github.com/rs/zerolog/log"
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 const (
@@ -43,7 +42,6 @@ func main() {
 	redisPassword := util.GetEnv("REDIS_PASSWORD", DefaultRedisPassword)
 	redisEnableTLS := util.GetEnv("REDIS_ENABLE_TLS", "")
 	timeIntervalStr := util.GetEnv("TIME_INTERVAL", DefaultTimeInterval)
-	datadogEnableTracing := util.GetEnv("DATADOG_ENABLE_TRACING", "")
 
 	// init context, waitGroup
 	ctx, cancel := context.WithCancel(context.Background())
@@ -102,12 +100,6 @@ func main() {
 	err = UpdateClientList(ctx, rdb)
 	if err != nil {
 		logger.Panic().Msg(err.Error())
-	}
-
-	// start datadog tracing if enabled
-	if datadogEnableTracing != "" {
-		tracer.Start()
-		defer tracer.Stop()
 	}
 
 	// get slowlogs
