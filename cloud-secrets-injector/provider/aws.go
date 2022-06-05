@@ -39,13 +39,19 @@ func (provider *AWS) GetSecretValue(secretId string) (string, error) {
 }
 
 func (provider *AWS) GetAndSaveSecretValueToFile(secretId, path string) (string, error) {
-	secretString, err := provider.GetSecretValue(secretId)
+	return provider.GetAndHandleSecretValue(secretId, func(secretValue string) (string, error) {
+		err := util.SaveStringToFile(path, secretValue)
+		if err != nil {
+			return "", err
+		}
+		return secretValue, nil
+	})
+}
+
+func (provider *AWS) GetAndHandleSecretValue(secretId string, handler SecretHandler) (string, error) {
+	secretValue, err := provider.GetSecretValue(secretId)
 	if err != nil {
 		return "", err
 	}
-	err = util.SaveStringToFile(path, secretString)
-	if err != nil {
-		return "", err
-	}
-	return secretString, nil
+	return handler(secretValue)
 }
