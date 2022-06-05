@@ -3,8 +3,9 @@ module github.com/h0n9/toybox/cloud-secrets-injector
 go 1.18
 
 require (
-	github.com/aws/aws-sdk-go-v2/config v1.15.9 // direct
-	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.15.9 // direct
+	github.com/aws/aws-sdk-go-v2/config v1.15.9
+	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.15.9
+	github.com/rs/zerolog v1.26.1
 )
 
 require (
@@ -18,5 +19,4 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.11.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.16.6 // indirect
 	github.com/aws/smithy-go v1.11.2 // indirect
-	github.com/rs/zerolog v1.26.1 // indirect
 )
