@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 
-	"github.com/h0n9/toybox/cloud-secret-injector/util"
+	"github.com/h0n9/toybox/cloud-secrets-injector/util"
 )
 
 type AWS struct {
