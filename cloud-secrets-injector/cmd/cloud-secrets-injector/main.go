@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strings"
 
+	"github.com/h0n9/toybox/cloud-secrets-injector/handler"
 	"github.com/h0n9/toybox/cloud-secrets-injector/provider"
 	"github.com/h0n9/toybox/cloud-secrets-injector/util"
 	"github.com/rs/zerolog"
@@ -30,17 +30,22 @@ func main() {
 		logger.Fatal().Msg("failed to read 'SECRET_ID'")
 	}
 
+	var secretHandler *handler.SecretHandler
+
 	switch strings.ToLower(providerName) {
 	case "aws":
 		providerAWS, err := provider.NewAWS(ctx)
 		if err != nil {
 			logger.Fatal().Msg(err.Error())
 		}
-		secretValue, err := providerAWS.GetSecretValue(secretId)
-		if err != nil {
-			logger.Err(err)
-			break
-		}
-		fmt.Println(secretValue)
+		secretHandler = handler.NewSecretHandler(providerAWS)
+	default:
+		logger.Fatal().Msg("failed to figure out the provider")
 	}
+
+	secretValue, err := secretHandler.Get(secretId)
+	if err != nil {
+		logger.Fatal().Msg(err.Error())
+	}
+	logger.Info().Msg(secretValue)
 }

@@ -2,7 +2,7 @@ package util
 
 import "os"
 
-func SaveStringToFile(path, data string) error {
+func SaveStringToFile(data, path string) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err

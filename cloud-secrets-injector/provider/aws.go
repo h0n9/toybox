@@ -5,8 +5,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
-
-	"github.com/h0n9/toybox/cloud-secrets-injector/util"
 )
 
 type AWS struct {
@@ -36,22 +34,4 @@ func (provider *AWS) GetSecretValue(secretId string) (string, error) {
 		return "", err
 	}
 	return *secret.SecretString, nil
-}
-
-func (provider *AWS) GetAndSaveSecretValueToFile(secretId, path string) (string, error) {
-	return provider.GetAndHandleSecretValue(secretId, func(secretValue string) (string, error) {
-		err := util.SaveStringToFile(path, secretValue)
-		if err != nil {
-			return "", err
-		}
-		return secretValue, nil
-	})
-}
-
-func (provider *AWS) GetAndHandleSecretValue(secretId string, handler SecretHandler) (string, error) {
-	secretValue, err := provider.GetSecretValue(secretId)
-	if err != nil {
-		return "", err
-	}
-	return handler(secretValue)
 }
