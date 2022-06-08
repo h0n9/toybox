@@ -1,0 +1,2 @@
+{{ range $k, $v := . }}export {{ $k }}={{ $v }}
+{{ end }}

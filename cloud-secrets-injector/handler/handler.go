@@ -15,9 +15,9 @@ type SecretHandler struct {
 	template *template.Template
 }
 
-func NewSecretHandler(provider provider.Provider, templateText string) (*SecretHandler, error) {
-	tmpl := template.New("secret-template")
-	tmpl, err := tmpl.Parse(templateText)
+func NewSecretHandler(provider provider.Provider, templateFilename string) (*SecretHandler, error) {
+	tmpl := template.New(templateFilename)
+	tmpl, err := tmpl.ParseFiles(templateFilename)
 	if err != nil {
 		return nil, err
 	}
@@ -49,6 +49,7 @@ func (handler *SecretHandler) Save(secretId, path string) error {
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
 	return handler.template.Execute(file, m)
 }

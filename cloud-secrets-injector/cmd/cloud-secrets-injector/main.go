@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	DefaultProviderName = "aws"
-	SampleTemplate      = "{{ range $k, $v := . }}export {{ $k }}={{ $v }}\n{{ end }}"
+	DefaultProviderName     = "aws"
+	DefaultTemplateFilename = "sample-template"
+	DefaultOutputFilename   = "output"
 )
 
 func main() {
@@ -26,6 +27,8 @@ func main() {
 	// get envs
 	providerName := util.GetEnv("PROVIDER_NAME", DefaultProviderName)
 	secretId := util.GetEnv("SECRET_ID", "")
+	templateFilename := util.GetEnv("TEMPLATE_FILENAME", DefaultTemplateFilename)
+	outputFilename := util.GetEnv("OUTPUT_FILENAME", DefaultOutputFilename)
 
 	if secretId == "" {
 		logger.Fatal().Msg("failed to read 'SECRET_ID'")
@@ -39,7 +42,7 @@ func main() {
 		if err != nil {
 			logger.Fatal().Msg(err.Error())
 		}
-		secretHandler, err = handler.NewSecretHandler(providerAWS, SampleTemplate)
+		secretHandler, err = handler.NewSecretHandler(providerAWS, templateFilename)
 		if err != nil {
 			logger.Fatal().Msg(err.Error())
 		}
@@ -47,7 +50,7 @@ func main() {
 		logger.Fatal().Msg("failed to figure out the provider")
 	}
 
-	err := secretHandler.Save(secretId, "envs")
+	err := secretHandler.Save(secretId, outputFilename)
 	if err != nil {
 		logger.Fatal().Msg(err.Error())
 	}
