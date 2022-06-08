@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"strings"
-	"text/template"
 
 	"github.com/h0n9/toybox/cloud-secrets-injector/handler"
 	"github.com/h0n9/toybox/cloud-secrets-injector/provider"
@@ -41,30 +39,15 @@ func main() {
 		if err != nil {
 			logger.Fatal().Msg(err.Error())
 		}
-		secretHandler = handler.NewSecretHandler(providerAWS)
+		secretHandler, err = handler.NewSecretHandler(providerAWS, SampleTemplate)
+		if err != nil {
+			logger.Fatal().Msg(err.Error())
+		}
 	default:
 		logger.Fatal().Msg("failed to figure out the provider")
 	}
 
-	secretValue, err := secretHandler.Get(secretId)
-	if err != nil {
-		logger.Fatal().Msg(err.Error())
-	}
-
-	var m map[string]interface{}
-
-	err = json.Unmarshal([]byte(secretValue), &m)
-	if err != nil {
-		logger.Fatal().Msg(err.Error())
-	}
-
-	tmpl := template.New("sample-template")
-	tmpl, err = tmpl.Parse(SampleTemplate)
-	if err != nil {
-		logger.Fatal().Msg(err.Error())
-	}
-
-	err = tmpl.Execute(os.Stdout, m)
+	err := secretHandler.Save(secretId, "envs")
 	if err != nil {
 		logger.Fatal().Msg(err.Error())
 	}

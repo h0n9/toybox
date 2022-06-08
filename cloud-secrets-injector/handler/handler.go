@@ -1,28 +1,54 @@
 package handler
 
 import (
+	"encoding/json"
+	"os"
+	"text/template"
+
 	"github.com/h0n9/toybox/cloud-secrets-injector/provider"
-	"github.com/h0n9/toybox/cloud-secrets-injector/util"
 )
 
 type SecretHandlerFunc func(string) (string, error)
 
 type SecretHandler struct {
 	provider provider.Provider
+	template *template.Template
 }
 
-func NewSecretHandler(provider provider.Provider) *SecretHandler {
-	return &SecretHandler{provider: provider}
+func NewSecretHandler(provider provider.Provider, templateText string) (*SecretHandler, error) {
+	tmpl := template.New("secret-template")
+	tmpl, err := tmpl.Parse(templateText)
+	if err != nil {
+		return nil, err
+	}
+	return &SecretHandler{provider: provider, template: tmpl}, nil
 }
 
-func (handler *SecretHandler) Get(secretId string) (string, error) {
-	return handler.provider.GetSecretValue(secretId)
+func (handler *SecretHandler) Get(secretId string) (map[string]interface{}, error) {
+	secretValue, err := handler.provider.GetSecretValue(secretId)
+	if err != nil {
+		return nil, err
+	}
+
+	var m map[string]interface{}
+	err = json.Unmarshal([]byte(secretValue), &m)
+	if err != nil {
+		return nil, err
+	}
+
+	return m, nil
 }
 
 func (handler *SecretHandler) Save(secretId, path string) error {
-	secretValue, err := handler.Get(secretId)
+	m, err := handler.Get(secretId)
 	if err != nil {
 		return err
 	}
-	return util.SaveStringToFile(secretValue, path)
+
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	return handler.template.Execute(file, m)
 }
