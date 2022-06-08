@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"strings"
+	"text/template"
 
 	"github.com/h0n9/toybox/cloud-secrets-injector/handler"
 	"github.com/h0n9/toybox/cloud-secrets-injector/provider"
@@ -13,6 +15,7 @@ import (
 
 const (
 	DefaultProviderName = "aws"
+	SampleTemplate      = "{{ range $k, $v := . }}export {{ $k }}={{ $v }}\n{{ end }}"
 )
 
 func main() {
@@ -47,5 +50,22 @@ func main() {
 	if err != nil {
 		logger.Fatal().Msg(err.Error())
 	}
-	logger.Info().Msg(secretValue)
+
+	var m map[string]interface{}
+
+	err = json.Unmarshal([]byte(secretValue), &m)
+	if err != nil {
+		logger.Fatal().Msg(err.Error())
+	}
+
+	tmpl := template.New("sample-template")
+	tmpl, err = tmpl.Parse(SampleTemplate)
+	if err != nil {
+		logger.Fatal().Msg(err.Error())
+	}
+
+	err = tmpl.Execute(os.Stdout, m)
+	if err != nil {
+		logger.Fatal().Msg(err.Error())
+	}
 }
