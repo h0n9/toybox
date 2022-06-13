@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
@@ -24,15 +25,18 @@ func main() {
 	// init context
 	ctx := context.Background()
 
-	// get envs
-	providerName := util.GetEnv("PROVIDER_NAME", DefaultProviderName)
-	secretId := util.GetEnv("SECRET_ID", "")
-	templateBase64 := util.GetEnv("TEMPLATE_BASE64", DefaultTemplateBase64)
-	outputFilename := util.GetEnv("OUTPUT_FILENAME", DefaultOutputFilename)
+	logger.Info().Msg("initialized context")
 
+	// get envs
+	secretId := util.GetEnv("SECRET_ID", "")
 	if secretId == "" {
 		logger.Fatal().Msg("failed to read 'SECRET_ID'")
 	}
+	providerName := util.GetEnv("PROVIDER_NAME", DefaultProviderName)
+	templateBase64 := util.GetEnv("TEMPLATE_BASE64", DefaultTemplateBase64)
+	outputFilename := util.GetEnv("OUTPUT_FILENAME", DefaultOutputFilename)
+
+	logger.Info().Msg("read environment variables")
 
 	// decode base64-encoded template to string
 	templateStr, err := util.DecodeBase64(templateBase64)
@@ -40,24 +44,36 @@ func main() {
 		logger.Fatal().Msg(err.Error())
 	}
 
-	var secretHandler *handler.SecretHandler
+	logger.Info().Msg("decoded base64-encoded template to string")
+
+	var (
+		secretProvider provider.Provider
+		secretHandler  *handler.SecretHandler
+	)
 
 	switch strings.ToLower(providerName) {
 	case "aws":
-		providerAWS, err := provider.NewAWS(ctx)
-		if err != nil {
-			logger.Fatal().Msg(err.Error())
-		}
-		secretHandler, err = handler.NewSecretHandler(providerAWS, templateStr)
+		secretProvider, err = provider.NewAWS(ctx)
 		if err != nil {
 			logger.Fatal().Msg(err.Error())
 		}
 	default:
-		logger.Fatal().Msg("failed to figure out the provider")
+		logger.Fatal().Msg("failed to figure out secret provider")
 	}
+
+	logger.Info().Msg(fmt.Sprintf("initialized secret provider '%s'", providerName))
+
+	secretHandler, err = handler.NewSecretHandler(secretProvider, templateStr)
+	if err != nil {
+		logger.Fatal().Msg(err.Error())
+	}
+
+	logger.Info().Msg("initialized secret handler")
 
 	err = secretHandler.Save(secretId, outputFilename)
 	if err != nil {
 		logger.Fatal().Msg(err.Error())
 	}
+
+	logger.Info().Msg(fmt.Sprintf("saved secret id '%s' values to '%s'", secretId, outputFilename))
 }
