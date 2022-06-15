@@ -13,7 +13,7 @@ RUN go build ./cmd/cloud-secrets-injector
 FROM alpine:3.16.0 AS runner
 WORKDIR /usr/bin/app
 RUN addgroup --system app && adduser --system --shell /bin/false --ingroup app app
-RUN chown -R app:app /usr/bin/app
 COPY --from=builder /usr/src/app/cloud-secrets-injector .
+RUN chown -R app:app /usr/bin/app
 USER app
 ENTRYPOINT [ "/usr/bin/app/cloud-secrets-injector" ]
