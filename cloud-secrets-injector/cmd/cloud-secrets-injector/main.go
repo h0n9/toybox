@@ -34,6 +34,7 @@ func main() {
 	}
 	providerName := util.GetEnv("PROVIDER_NAME", DefaultProviderName)
 	templateBase64 := util.GetEnv("TEMPLATE_BASE64", DefaultTemplateBase64)
+	templateFilename := util.GetEnv("TEMPLATE_FILENAME", "")
 	outputFilename := util.GetEnv("OUTPUT_FILENAME", DefaultOutputFilename)
 
 	logger.Info().Msg("read environment variables")
@@ -43,8 +44,14 @@ func main() {
 	if err != nil {
 		logger.Fatal().Msg(err.Error())
 	}
+	if templateFilename != "" {
+		templateStr, err = util.ReadFileToStr(templateFilename)
+		if err != nil {
+			logger.Fatal().Msg(err.Error())
+		}
+	}
 
-	logger.Info().Msg("decoded base64-encoded template to string")
+	logger.Info().Msg("loaded template")
 
 	var (
 		secretProvider provider.Provider

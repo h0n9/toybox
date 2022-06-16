@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/base64"
+	"io/ioutil"
 	"os"
 )
 
@@ -18,4 +19,12 @@ func DecodeBase64(input string) (string, error) {
 		return "", err
 	}
 	return string(output), nil
+}
+
+func ReadFileToStr(filename string) (string, error) {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
