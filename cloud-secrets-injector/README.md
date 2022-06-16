@@ -12,9 +12,10 @@ Injector](https://www.vaultproject.io/docs/platform/k8s/injector).
 
 ### Environment Variables
 
-| **Name**          | **Default**                                                                | **Required** |
-|-------------------|----------------------------------------------------------------------------|--------------|
-| `PROVIDER_NAME`   | `aws`                                                                      | false        |
-| `SECRET_ID`       |                                                                            | true         |
-| `TEMPLATE_BASE64` | `e3sgcmFuZ2UgJGssICR2IDo9IC4gfX1be3sgJGsgfX1dCnt7ICR2IH19Cgp7eyBlbmQgfX0K` | false        |
-| `OUTPUT_FILENAME` | `output`                                                                   | false        |
+| **Name**            | **Default**                                                                | **Required** |
+|---------------------|----------------------------------------------------------------------------|--------------|
+| `PROVIDER_NAME`     | `aws`                                                                      | false        |
+| `SECRET_ID`         |                                                                            | true         |
+| `TEMPLATE_BASE64`   | `e3sgcmFuZ2UgJGssICR2IDo9IC4gfX1be3sgJGsgfX1dCnt7ICR2IH19Cgp7eyBlbmQgfX0K` | false        |
+| `TEMPLATE_FILENAME` |                                                                            | false        |
+| `OUTPUT_FILENAME`   | `output`                                                                   | false        |
