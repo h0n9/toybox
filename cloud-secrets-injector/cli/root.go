@@ -3,12 +3,14 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/h0n9/toybox/cloud-secrets-injector/cli/injector"
 	"github.com/h0n9/toybox/cloud-secrets-injector/handler"
 	"github.com/h0n9/toybox/cloud-secrets-injector/provider"
 	"github.com/h0n9/toybox/cloud-secrets-injector/util"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
 
@@ -16,10 +18,8 @@ var RootCmd = &cobra.Command{
 	Use:   Name,
 	Short: fmt.Sprintf("'%s' is a tool for injecting cloud-based secrets into Docker containers", Name),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// check logger
-		if logger == nil {
-			return fmt.Errorf("faild to load logger")
-		}
+		// init logger
+		logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 
 		// init context
 		ctx := context.Background()
