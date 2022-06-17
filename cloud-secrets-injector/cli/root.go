@@ -9,26 +9,18 @@ import (
 	"github.com/h0n9/toybox/cloud-secrets-injector/handler"
 	"github.com/h0n9/toybox/cloud-secrets-injector/provider"
 	"github.com/h0n9/toybox/cloud-secrets-injector/util"
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
-
-const (
-	DefaultProviderName   = "aws"
-	DefaultTemplateBase64 = "e3sgcmFuZ2UgJGssICR2IDo9IC4gfX1be3sgJGsgfX1dCnt7ICR2IH19Cgp7eyBlbmQgfX0K"
-	DefaultOutputFilename = "output"
-)
-
-var logger *zerolog.Logger
-
-func InitLogger(l *zerolog.Logger) {
-	logger = l
-}
 
 var RootCmd = &cobra.Command{
 	Use:   Name,
 	Short: fmt.Sprintf("'%s' is a tool for injecting cloud-based secrets into Docker containers", Name),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// check logger
+		if logger == nil {
+			return fmt.Errorf("faild to load logger")
+		}
+
 		// init context
 		ctx := context.Background()
 
