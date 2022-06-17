@@ -15,12 +15,7 @@ type SecretHandler struct {
 	template *template.Template
 }
 
-func NewSecretHandler(provider provider.Provider, templateStr string) (*SecretHandler, error) {
-	tmpl := template.New("secret-template")
-	tmpl, err := tmpl.Parse(templateStr)
-	if err != nil {
-		return nil, err
-	}
+func NewSecretHandler(provider provider.Provider, tmpl *template.Template) (*SecretHandler, error) {
 	return &SecretHandler{provider: provider, template: tmpl}, nil
 }
 

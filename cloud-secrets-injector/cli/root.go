@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"text/template"
 
 	"github.com/h0n9/toybox/cloud-secrets-injector/cli/injector"
 	"github.com/h0n9/toybox/cloud-secrets-injector/handler"
@@ -49,6 +50,11 @@ var RootCmd = &cobra.Command{
 				return err
 			}
 		}
+		tmpl := template.New("secret-template")
+		tmpl, err = tmpl.Parse(templateStr)
+		if err != nil {
+			return err
+		}
 
 		logger.Info().Msg("loaded template")
 
@@ -69,7 +75,7 @@ var RootCmd = &cobra.Command{
 
 		logger.Info().Msg(fmt.Sprintf("initialized secret provider '%s'", providerName))
 
-		secretHandler, err = handler.NewSecretHandler(secretProvider, templateStr)
+		secretHandler, err = handler.NewSecretHandler(secretProvider, tmpl)
 		if err != nil {
 			return err
 		}
