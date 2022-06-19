@@ -8,14 +8,27 @@ Injector](https://www.vaultproject.io/docs/platform/k8s/injector).
 ## Supported Cloud Providers
 - AWS(Amazon Web Services): Secrets Manager
 
-## Usage
+## Environment Variables
 
-### Environment Variables
+### Common
 
 | **Name**            | **Default**                                                                | **Required** |
 |---------------------|----------------------------------------------------------------------------|--------------|
 | `PROVIDER_NAME`     | `aws`                                                                      | false        |
-| `SECRET_ID`         |                                                                            | true         |
 | `TEMPLATE_BASE64`   | `e3sgcmFuZ2UgJGssICR2IDo9IC4gfX1be3sgJGsgfX1dCnt7ICR2IH19Cgp7eyBlbmQgfX0K` | false        |
 | `TEMPLATE_FILENAME` |                                                                            | false        |
 | `OUTPUT_FILENAME`   | `output`                                                                   | false        |
+
+### AWS
+
+| **Name**                | **Default** | **Required** |
+|-------------------------|-------------|--------------|
+| `SECRET_ID`             |             | true         |
+| `AWS_ACCESS_KEY_ID`     |             | false        |
+| `AWS_SECRET_ACCESS_KEY` |             | false        |
+
+Please don't forget to pass credentials, referring to [Specifying
+Credentials](https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials)
+page.
+
+## Usage
