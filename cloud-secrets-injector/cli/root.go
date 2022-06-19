@@ -34,8 +34,8 @@ var RootCmd = &cobra.Command{
 		}
 		providerName := util.GetEnv("PROVIDER_NAME", DefaultProviderName)
 		templateBase64 := util.GetEnv("TEMPLATE_BASE64", DefaultTemplateBase64)
-		templateFilename := util.GetEnv("TEMPLATE_FILENAME", "")
-		outputFilename := util.GetEnv("OUTPUT_FILENAME", DefaultOutputFilename)
+		templateFile := util.GetEnv("TEMPLATE_FILE", "")
+		outputFile := util.GetEnv("OUTPUT_FILE", DefaultOutputFilename)
 
 		logger.Info().Msg("read environment variables")
 
@@ -44,8 +44,8 @@ var RootCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if templateFilename != "" {
-			templateStr, err = util.ReadFileToStr(templateFilename)
+		if templateFile != "" {
+			templateStr, err = util.ReadFileToStr(templateFile)
 			if err != nil {
 				return err
 			}
@@ -82,12 +82,12 @@ var RootCmd = &cobra.Command{
 
 		logger.Info().Msg("initialized secret handler")
 
-		err = secretHandler.Save(secretId, outputFilename)
+		err = secretHandler.Save(secretId, outputFile)
 		if err != nil {
 			return err
 		}
 
-		logger.Info().Msg(fmt.Sprintf("saved secret id '%s' values to '%s'", secretId, outputFilename))
+		logger.Info().Msg(fmt.Sprintf("saved secret id '%s' values to '%s'", secretId, outputFile))
 
 		return nil
 	},
