@@ -9,6 +9,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	csiWebhook "github.com/h0n9/toybox/cloud-secrets-injector/webhook"
 )
 
 func init() {
@@ -23,14 +25,18 @@ func main() {
 		Logger: logger,
 	})
 	if err != nil {
-		logger.Error(err, "faild to setup overall controller manager")
+		logger.Error(err, "faild to setup manager")
 		os.Exit(1)
 	}
 
 	hookServer := mgr.GetWebhookServer()
 
-	hookServer.Register("/mutate", &webhook.Admission{Handler: nil})
-	hookServer.Register("/validate", &webhook.Admission{Handler: nil})
+	hookServer.Register("/mutate", &webhook.Admission{Handler: &csiWebhook.Mutator{
+		Client: mgr.GetClient(),
+	}})
+	hookServer.Register("/validate", &webhook.Admission{Handler: &csiWebhook.Validator{
+		Client: mgr.GetClient(),
+	}})
 
 	err = mgr.Start(signals.SetupSignalHandler())
 	if err != nil {
