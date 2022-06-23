@@ -1,6 +1,9 @@
 package webhook
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+)
 
 type Annotations map[string]string
 
@@ -16,7 +19,7 @@ var annotationsAvailable = map[string]bool{
 	"injected": true,
 }
 
-func ParseAndCheckAnnotations(input map[string]string) map[string]string {
+func ParseAndCheckAnnotations(input Annotations) Annotations {
 	output := map[string]string{}
 	for key, value := range input {
 		subPath := strings.TrimPrefix(key, AnnotationPrefix+"/")
@@ -29,4 +32,16 @@ func ParseAndCheckAnnotations(input map[string]string) map[string]string {
 		output[subPath] = value
 	}
 	return output
+}
+
+func (a Annotations) IsInected() bool {
+	value, exist := a["injected"]
+	if !exist {
+		return false
+	}
+	injected, err := strconv.ParseBool(value)
+	if err != nil {
+		return false
+	}
+	return injected
 }
