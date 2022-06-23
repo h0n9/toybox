@@ -19,6 +19,7 @@ func TestParseAndCheckAnnotations(t *testing.T) {
 		"cloud-secrets-injector.h0n9.postie.chat/key-id":            "life-is-beautiful", // ✅
 		"cloud-secrets-injector.h0n9.postie.chat/output":            "/envs",             // ✅
 		"cloud-secrets-injector.h0n9.postie.chat/template":          SampleTemplate,      // ✅
+		"cloud-secrets-injector.h0n9.postie.chat/injected":          "true",              // ✅
 		"cloud-secrets-injector.h0n9.posite.chat/template":          SampleTemplate,      // ❌: typo
 		"cloud-secrets-injector.h0n9.postie.chat/volume-path":       "/envs",             // ❌: unsupported
 		"cloud-secrets-injector.h0n9.postie.chat":                   "h0n9",              // ❌: non subpath
@@ -30,6 +31,7 @@ func TestParseAndCheckAnnotations(t *testing.T) {
 		"key-id":   "life-is-beautiful",
 		"template": SampleTemplate,
 		"output":   "/envs",
+		"injected": "true",
 	}
 	assert.EqualValues(t, expectedOutput, output)
 }

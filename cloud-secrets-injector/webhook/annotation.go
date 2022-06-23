@@ -13,6 +13,7 @@ var annotationsAvailable = map[string]bool{
 	"key-id":   true,
 	"template": true,
 	"output":   true,
+	"injected": true,
 }
 
 func ParseAndCheckAnnotations(input map[string]string) map[string]string {
