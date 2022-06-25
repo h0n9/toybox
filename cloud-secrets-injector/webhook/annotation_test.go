@@ -35,3 +35,18 @@ func TestParseAndCheckAnnotations(t *testing.T) {
 	}
 	assert.EqualValues(t, expectedOutput, output)
 }
+
+func TestAnnotationsIsInjected(t *testing.T) {
+	annotations := Annotations{}
+	assert.False(t, annotations.IsInected())
+	annotations = Annotations{"injected": "false"}
+	assert.False(t, annotations.IsInected())
+	annotations = Annotations{"injected": "x"}
+	assert.False(t, annotations.IsInected())
+	annotations = Annotations{"injected": "ture"}
+	assert.False(t, annotations.IsInected())
+	annotations = Annotations{"injected": "t"}
+	assert.True(t, annotations.IsInected())
+	annotations = Annotations{"injected": "true"}
+	assert.True(t, annotations.IsInected())
+}
