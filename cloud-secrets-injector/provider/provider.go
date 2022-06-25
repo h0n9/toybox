@@ -1,5 +1,5 @@
 package provider
 
-type Provider interface {
+type SecretProvider interface {
 	GetSecretValue(string) (string, error)
 }

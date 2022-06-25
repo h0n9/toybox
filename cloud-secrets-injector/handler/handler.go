@@ -11,11 +11,11 @@ import (
 type SecretHandlerFunc func(string) (string, error)
 
 type SecretHandler struct {
-	provider provider.Provider
+	provider provider.SecretProvider
 	template *template.Template
 }
 
-func NewSecretHandler(provider provider.Provider, tmpl *template.Template) (*SecretHandler, error) {
+func NewSecretHandler(provider provider.SecretProvider, tmpl *template.Template) (*SecretHandler, error) {
 	return &SecretHandler{provider: provider, template: tmpl}, nil
 }
 

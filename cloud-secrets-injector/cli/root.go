@@ -59,7 +59,7 @@ var RootCmd = &cobra.Command{
 		logger.Info().Msg("loaded template")
 
 		var (
-			secretProvider provider.Provider
+			secretProvider provider.SecretProvider
 			secretHandler  *handler.SecretHandler
 		)
 
