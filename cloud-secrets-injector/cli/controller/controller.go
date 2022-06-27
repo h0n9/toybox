@@ -14,19 +14,21 @@ import (
 	csiWebhook "github.com/h0n9/toybox/cloud-secrets-injector/webhook"
 )
 
-func init() {
-	log.SetLogger(zap.New())
-}
-
 var Cmd = &cobra.Command{
 	Use:   "controller",
-	Short: "run a server serving as a admission webhook controller manager",
+	Short: "admission webhook controller",
+}
+
+var runCmd = &cobra.Command{
+	Use:   "run",
+	Short: "run a server for managing admission webhooks",
 	Run: func(cmd *cobra.Command, args []string) {
+		log.SetLogger(zap.New())
 		logger := log.Log.WithName("cloud-secrets-injector-controller")
 
 		mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{Logger: logger})
 		if err != nil {
-			logger.Error(err, "faild to setup manager")
+			logger.Error(err, "faild to setup controller")
 			os.Exit(1)
 		}
 
@@ -39,11 +41,15 @@ var Cmd = &cobra.Command{
 		}})
 		logger.Info("registered mutate, validator handlers to /mutate, /validate webhook uris")
 
-		logger.Info("starting manager")
+		logger.Info("starting controller")
 		err = mgr.Start(signals.SetupSignalHandler())
 		if err != nil {
-			logger.Error(err, "failed to run manager")
+			logger.Error(err, "failed to run controller")
 			os.Exit(1)
 		}
 	},
+}
+
+func init() {
+	Cmd.AddCommand(runCmd)
 }

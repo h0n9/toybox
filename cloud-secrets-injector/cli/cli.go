@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	Name    = "cloud-secrets-injector"
+	Name    = "cloud-secrets-manager"
 	Version = "v0.0.1"
 
 	DefaultProviderName   = "aws"
