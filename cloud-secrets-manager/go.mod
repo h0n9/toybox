@@ -1,4 +1,4 @@
-module github.com/h0n9/toybox/cloud-secrets-injector
+module github.com/h0n9/toybox/cloud-secrets-manager
 
 go 1.18
 

@@ -1,6 +1,6 @@
-# Cloud Secrets Injector
+# Cloud Secrets Manager
 
-This simple yet powerful tool named **Cloud Secrets Injector** aims to simplify
+This simple yet powerful tool named **Cloud Secrets Manager** aims to simplify
 the way to inject secrets strored on Cloud-based secrets managers into
 Kubernetes Pods, functioning as [HashiCorp Vault's Agent Sidecar
 Injector](https://www.vaultproject.io/docs/platform/k8s/injector).

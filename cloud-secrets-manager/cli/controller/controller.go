@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	csiWebhook "github.com/h0n9/toybox/cloud-secrets-injector/webhook"
+	csiWebhook "github.com/h0n9/toybox/cloud-secrets-manager/webhook"
 )
 
 var Cmd = &cobra.Command{

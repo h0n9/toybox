@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/h0n9/toybox/cloud-secrets-injector/cli"
+	"github.com/h0n9/toybox/cloud-secrets-manager/cli"
 )
 
 func main() {

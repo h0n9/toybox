@@ -8,11 +8,12 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/h0n9/toybox/cloud-secrets-injector/handler"
-	"github.com/h0n9/toybox/cloud-secrets-injector/provider"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/h0n9/toybox/cloud-secrets-manager/handler"
+	"github.com/h0n9/toybox/cloud-secrets-manager/provider"
 )
 
 type Mutator struct {

@@ -3,10 +3,11 @@ package cli
 import (
 	"fmt"
 
-	"github.com/h0n9/toybox/cloud-secrets-injector/cli/controller"
-	"github.com/h0n9/toybox/cloud-secrets-injector/cli/injector"
-	cliTemplate "github.com/h0n9/toybox/cloud-secrets-injector/cli/template"
 	"github.com/spf13/cobra"
+
+	"github.com/h0n9/toybox/cloud-secrets-manager/cli/controller"
+	"github.com/h0n9/toybox/cloud-secrets-manager/cli/injector"
+	cliTemplate "github.com/h0n9/toybox/cloud-secrets-manager/cli/template"
 )
 
 var RootCmd = &cobra.Command{

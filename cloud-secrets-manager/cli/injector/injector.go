@@ -10,9 +10,9 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
-	"github.com/h0n9/toybox/cloud-secrets-injector/handler"
-	"github.com/h0n9/toybox/cloud-secrets-injector/provider"
-	"github.com/h0n9/toybox/cloud-secrets-injector/util"
+	"github.com/h0n9/toybox/cloud-secrets-manager/handler"
+	"github.com/h0n9/toybox/cloud-secrets-manager/provider"
+	"github.com/h0n9/toybox/cloud-secrets-manager/util"
 )
 
 const (

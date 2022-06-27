@@ -9,7 +9,7 @@ import (
 type Annotations map[string]string
 
 const (
-	AnnotationPrefix = "cloud-secrets-injector.h0n9.postie.chat"
+	AnnotationPrefix = "cloud-secrets-manager.h0n9.postie.chat"
 )
 
 var annotationsAvailable = map[string]bool{

@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/h0n9/toybox/cloud-secrets-injector/util"
+	"github.com/h0n9/toybox/cloud-secrets-manager/util"
 )
 
 var decodeCmd = &cobra.Command{
