@@ -5,8 +5,9 @@ import (
 	"os"
 	"text/template"
 
-	"github.com/h0n9/toybox/cloud-secrets-injector/util"
 	"github.com/spf13/cobra"
+
+	"github.com/h0n9/toybox/cloud-secrets-injector/util"
 )
 
 var testCmd = &cobra.Command{
