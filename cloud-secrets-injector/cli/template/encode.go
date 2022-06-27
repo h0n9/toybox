@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var EncodeCmd = &cobra.Command{
+var encodeCmd = &cobra.Command{
 	Use:   "encode",
 	Short: "encode human-readable template string to base64-encoded string",
 	Args:  cobra.ExactArgs(1),

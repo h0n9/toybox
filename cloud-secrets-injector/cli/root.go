@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/h0n9/toybox/cloud-secrets-injector/cli/injector"
+	cliTemplate "github.com/h0n9/toybox/cloud-secrets-injector/cli/template"
 	"github.com/h0n9/toybox/cloud-secrets-injector/handler"
 	"github.com/h0n9/toybox/cloud-secrets-injector/provider"
 	"github.com/h0n9/toybox/cloud-secrets-injector/util"
@@ -97,7 +97,7 @@ func init() {
 	cobra.EnableCommandSorting = false
 
 	RootCmd.AddCommand(
-		injector.TemplateCmd,
+		cliTemplate.Cmd,
 		VersionCmd,
 	)
 }

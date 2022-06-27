@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var DecodeCmd = &cobra.Command{
+var decodeCmd = &cobra.Command{
 	Use:   "decode",
 	Short: "decode base64-encoded template string to human-readable string",
 	Args:  cobra.ExactArgs(1),

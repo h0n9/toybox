@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var TestCmd = &cobra.Command{
+var testCmd = &cobra.Command{
 	Use:   "test",
 	Short: "test base64-encoded template string",
 	Args:  cobra.ExactArgs(1),
