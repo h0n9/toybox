@@ -2,7 +2,7 @@
 
 ## Toys
 
-- 🎓 [cloud-secrets-manager](cloud-secrets-manager/)
+- 🎓 [cloud-secrets-manager](https://github.com/h0n9/cloud-secrets-manager)
 - 🥚 [kistio](kistio/)
 - 🐣 [redis-logger](redis-logger/)
 - 🫥 [kube-restarter](kube-restarter/)
