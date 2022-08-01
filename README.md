@@ -2,10 +2,10 @@
 
 ## Toys
 
-- 🎓 [cloud-secrets-manager](cloud-secrets-manager/README.md)
-- 🥚 [kistio](kistio/README.md)
-- 🐣 [redis-logger](redis-logger/README.md)
-- 🫥 kube-restarter
+- 🎓 [cloud-secrets-manager](cloud-secrets-manager/)
+- 🥚 [kistio](kistio/)
+- 🐣 [redis-logger](redis-logger/)
+- 🫥 [kube-restarter](kube-restarter/)
 
 ```
 # brief of conditions
