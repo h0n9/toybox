@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"sync"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+
 	"github.com/h0n9/toybox/kistio/agent/p2p"
 	pb "github.com/h0n9/toybox/kistio/proto"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
 
 type KistioServer struct {

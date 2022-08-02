@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/h0n9/toybox/kistio/agent/util"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+
 	"github.com/postie-labs/go-postie-lib/crypto"
+
+	"github.com/h0n9/toybox/kistio/agent/util"
 )
 
 type Node struct {

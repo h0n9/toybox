@@ -12,8 +12,9 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/h0n9/toybox/redis-logger/util"
 	"github.com/rs/zerolog/log"
+
+	"github.com/h0n9/toybox/redis-logger/util"
 )
 
 const (

@@ -8,12 +8,13 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/h0n9/toybox/kistio/agent/p2p"
-	"github.com/h0n9/toybox/kistio/agent/server"
-	"github.com/h0n9/toybox/kistio/agent/util"
 	pb "github.com/h0n9/toybox/kistio/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
+
+	"github.com/h0n9/toybox/kistio/agent/p2p"
+	"github.com/h0n9/toybox/kistio/agent/server"
+	"github.com/h0n9/toybox/kistio/agent/util"
 )
 
 func main() {
