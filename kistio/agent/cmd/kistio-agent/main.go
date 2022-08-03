@@ -50,8 +50,7 @@ func main() {
 	healthCheckerSrv := server.NewHealthChecker()
 
 	// init grpcServer
-	opts := []grpc.ServerOption{}
-	grpcSrv := grpc.NewServer(opts...)
+	grpcSrv := grpc.NewServer()
 
 	// register server(handler) to grpcServer
 	pb.RegisterKistioServer(grpcSrv, kistioSrv)
