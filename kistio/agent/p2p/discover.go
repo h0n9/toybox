@@ -69,29 +69,24 @@ func (n *Node) Discover(rendezVous string) error {
 
 	go backoffDiscovery.Advertise(n.ctx, rendezVous, opts...)
 
-	go func() {
-		peerCh, err := backoffDiscovery.FindPeers(n.ctx, rendezVous, opts...)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+	peerCh, err := backoffDiscovery.FindPeers(n.ctx, rendezVous, opts...)
+	if err != nil {
+		return err
+	}
 
-		for {
-			select {
-			case <-n.ctx.Done():
-				fmt.Println("stop discovering peers")
-				return
-			case peer := <-peerCh:
-				if peer.ID == n.GetHostID() || peer.ID == "" {
-					continue
-				}
-				err := n.connectPeerInfo(peer)
-				if err != nil {
-					fmt.Println(err)
-				}
+	for {
+		select {
+		case <-n.ctx.Done():
+			fmt.Println("stop discovering peers")
+			return nil
+		case peer := <-peerCh:
+			if peer.ID == n.GetHostID() || peer.ID == "" {
+				continue
+			}
+			err := n.connectPeerInfo(peer)
+			if err != nil {
+				fmt.Println(err)
 			}
 		}
-	}()
-
-	return nil
+	}
 }
