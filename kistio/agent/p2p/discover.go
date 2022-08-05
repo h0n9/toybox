@@ -8,7 +8,6 @@ import (
 	coreDiscovery "github.com/libp2p/go-libp2p-core/discovery"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
-	discovery "github.com/libp2p/go-libp2p-discovery"
 	"github.com/multiformats/go-multiaddr"
 
 	"github.com/postie-labs/go-postie-lib/crypto"
@@ -57,19 +56,12 @@ func (n *Node) Bootstrap(bsNodes crypto.Addrs) error {
 	return n.connectMultiAddrs(bsNodes)
 }
 
+func (n *Node) Advertise(rendezVous string) (time.Duration, error) {
+	return n.backoffDiscovery.Advertise(n.ctx, rendezVous, coreDiscovery.TTL(300*time.Millisecond))
+}
+
 func (n *Node) Discover(rendezVous string) error {
-	// advertise rendez-vous annoucement
-	routingDiscovery := discovery.NewRoutingDiscovery(n.peerDiscovery)
-	backoffDiscovery, err := discovery.NewBackoffDiscovery(routingDiscovery, discovery.NewFixedBackoff(1*time.Second))
-	if err != nil {
-		return err
-	}
-
-	opts := []coreDiscovery.Option{coreDiscovery.TTL(300 * time.Millisecond)}
-
-	go backoffDiscovery.Advertise(n.ctx, rendezVous, opts...)
-
-	peerCh, err := backoffDiscovery.FindPeers(n.ctx, rendezVous, opts...)
+	peerCh, err := n.backoffDiscovery.FindPeers(n.ctx, rendezVous, coreDiscovery.TTL(300*time.Millisecond))
 	if err != nil {
 		return err
 	}

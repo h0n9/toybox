@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
+	coreDiscovery "github.com/libp2p/go-libp2p-core/discovery"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
+	discovery "github.com/libp2p/go-libp2p-discovery"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 
@@ -22,8 +25,10 @@ type Node struct {
 	pubKey  *crypto.PubKey
 	address crypto.Addr
 
-	host          host.Host
-	peerDiscovery *dht.IpfsDHT
+	host             host.Host
+	peerDiscovery    *dht.IpfsDHT
+	routingDiscovery *discovery.RoutingDiscovery
+	backoffDiscovery coreDiscovery.Discovery
 
 	pubSub *pubsub.PubSub
 }
@@ -61,7 +66,15 @@ func NewNode(ctx context.Context, cfg *util.Config) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
+	routingDiscovery := discovery.NewRoutingDiscovery(peerDiscovery)
+	backoffDiscovery, err := discovery.NewBackoffDiscovery(routingDiscovery, discovery.NewFixedBackoff(1*time.Second))
+	if err != nil {
+		return nil, err
+	}
+
 	node.peerDiscovery = peerDiscovery
+	node.routingDiscovery = routingDiscovery
+	node.backoffDiscovery = backoffDiscovery
 
 	err = node.NewPubSub()
 	if err != nil {

@@ -41,6 +41,7 @@ func main() {
 		panic(err)
 	}
 
+	go node.Advertise(cfg.RendezVous)
 	go node.Discover(cfg.RendezVous)
 
 	fmt.Println(node.Info())
