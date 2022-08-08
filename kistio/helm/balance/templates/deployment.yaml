@@ -31,7 +31,7 @@ spec:
         - name: kistio-agent
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: ghcr.io/h0n9/kistio-agent
+          image: ghcr.io/h0n9/kistio-agent:v0.0.1
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: quic
