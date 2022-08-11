@@ -18,6 +18,7 @@ func (n *Node) connectPeerInfo(pi peer.AddrInfo) error {
 	if c == network.Connected || c == network.CannotConnect {
 		return nil
 	}
+	n.host.Peerstore().AddAddrs(pi.ID, pi.Addrs, peerstore.PermanentAddrTTL)
 	err := n.host.Connect(n.ctx, pi)
 	if err != nil {
 		return err
