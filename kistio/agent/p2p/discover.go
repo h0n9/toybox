@@ -58,11 +58,14 @@ func (n *Node) Bootstrap(bsNodes crypto.Addrs) error {
 }
 
 func (n *Node) Advertise(rendezVous string) (time.Duration, error) {
-	return n.backoffDiscovery.Advertise(n.ctx, rendezVous, coreDiscovery.TTL(300*time.Millisecond))
+	return n.backoffDiscovery.Advertise(n.ctx, rendezVous)
 }
 
 func (n *Node) Discover(rendezVous string) error {
-	peerCh, err := n.backoffDiscovery.FindPeers(n.ctx, rendezVous, coreDiscovery.TTL(300*time.Millisecond))
+	peerCh, err := n.backoffDiscovery.FindPeers(n.ctx, rendezVous,
+		coreDiscovery.TTL(100*time.Millisecond),
+		coreDiscovery.Limit(3),
+	)
 	if err != nil {
 		return err
 	}
