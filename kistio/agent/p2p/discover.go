@@ -8,6 +8,7 @@ import (
 	coreDiscovery "github.com/libp2p/go-libp2p-core/discovery"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/peerstore"
 	"github.com/multiformats/go-multiaddr"
 
 	"github.com/postie-labs/go-postie-lib/crypto"
@@ -76,13 +77,16 @@ func (n *Node) Discover(rendezVous string) error {
 			fmt.Println("stop discovering peers")
 			return nil
 		case peer := <-peerCh:
-			if peer.ID == n.GetHostID() || peer.ID == "" {
-				continue
-			}
-			err := n.connectPeerInfo(peer)
-			if err != nil {
-				fmt.Println(err)
-			}
+			go func() {
+				if peer.ID == n.GetHostID() || peer.ID == "" {
+					return
+				}
+				err := n.connectPeerInfo(peer)
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+			}()
 		}
 	}
 }
