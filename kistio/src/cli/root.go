@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 
 	kistio "github.com/h0n9/toybox/kistio/src"
+	"github.com/h0n9/toybox/kistio/src/cli/agent"
+	"github.com/h0n9/toybox/kistio/src/cli/center"
 )
 
 var RootCmd = &cobra.Command{
@@ -16,5 +18,8 @@ var RootCmd = &cobra.Command{
 func init() {
 	cobra.EnableCommandSorting = false
 
-	RootCmd.AddCommand()
+	RootCmd.AddCommand(
+		center.Cmd,
+		agent.Cmd,
+	)
 }
