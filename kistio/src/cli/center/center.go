@@ -4,7 +4,7 @@ import "github.com/spf13/cobra"
 
 var Cmd = &cobra.Command{
 	Use:   "center",
-	Short: "kistio-center: seed node, admission webhook controller",
+	Short: "seed node, admission webhook controller",
 }
 
 var runCmd = &cobra.Command{

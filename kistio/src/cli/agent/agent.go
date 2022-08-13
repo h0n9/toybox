@@ -4,7 +4,7 @@ import "github.com/spf13/cobra"
 
 var Cmd = &cobra.Command{
 	Use:   "agent",
-	Short: "kistio-agent: connector node",
+	Short: "connector node",
 }
 
 var runCmd = &cobra.Command{
