@@ -23,18 +23,26 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "run a server for connector node",
 	Run: func(cmd *cobra.Command, args []string) {
+		// init logger
 		logger := zerolog.New(os.Stderr).With().
 			Timestamp().
 			Str("service", fmt.Sprintf("%s-%s", kistio.Name, Cmd.Use)).
 			Logger()
+
+		// init context
 		_, cancel := context.WithCancel(context.Background())
+
+		// init sig channel
 		sigCh := make(chan os.Signal, 1)
 		defer close(sigCh)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+		// init wait group
 		wg := sync.WaitGroup{}
 
 		logger.Info().Msg("initialized logger, context, sig channel, wait group")
 
+		// init goroutine for watching signals
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -43,6 +51,11 @@ var runCmd = &cobra.Command{
 			cancel()
 		}()
 
+		// **********************
+		// * do something here *
+		// **********************
+
+		// wait until all of wait groups are done
 		wg.Wait()
 	},
 }
