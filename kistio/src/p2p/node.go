@@ -10,9 +10,9 @@ import (
 	libp2pDiscovery "github.com/libp2p/go-libp2p-core/discovery"
 	libp2pHost "github.com/libp2p/go-libp2p-core/host"
 	libp2pDHT "github.com/libp2p/go-libp2p-kad-dht"
-	quic "github.com/libp2p/go-libp2p-quic-transport"
 	discoveryBackoff "github.com/libp2p/go-libp2p/p2p/discovery/backoff"
 	discoveryRouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
+	quic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/postie-labs/go-postie-lib/crypto"
 
 	"github.com/h0n9/toybox/kistio/src/util"

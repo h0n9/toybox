@@ -6,7 +6,6 @@ require (
 	github.com/libp2p/go-libp2p v0.21.0
 	github.com/libp2p/go-libp2p-core v0.19.1
 	github.com/libp2p/go-libp2p-kad-dht v0.17.0
-	github.com/libp2p/go-libp2p-quic-transport v0.18.0
 	github.com/postie-labs/go-postie-lib v0.0.1
 	github.com/rs/zerolog v1.27.0
 	github.com/spf13/cobra v1.5.0
