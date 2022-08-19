@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	libp2p "github.com/libp2p/go-libp2p"
+	libp2pDiscovery "github.com/libp2p/go-libp2p-core/discovery"
 	libp2pHost "github.com/libp2p/go-libp2p-core/host"
-	dht "github.com/libp2p/go-libp2p-kad-dht"
+	libp2pDHT "github.com/libp2p/go-libp2p-kad-dht"
 	quic "github.com/libp2p/go-libp2p-quic-transport"
+	discoveryBackoff "github.com/libp2p/go-libp2p/p2p/discovery/backoff"
+	discoveryRouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	"github.com/postie-labs/go-postie-lib/crypto"
 
 	"github.com/h0n9/toybox/kistio/src/util"
@@ -21,7 +25,8 @@ type Node struct {
 	pubKey  *crypto.PubKey
 	addr    crypto.Addr
 
-	host libp2pHost.Host
+	host      libp2pHost.Host
+	discovery libp2pDiscovery.Discovery
 }
 
 func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs, dhtModeServer bool) (*Node, error) {
@@ -73,11 +78,18 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs, dhtMode
 	}
 
 	// init dht
-	dhtOpts := []dht.Option{}
+	dhtOpts := []libp2pDHT.Option{}
 	if dhtModeServer {
-		dhtOpts = append(dhtOpts, dht.Mode(dht.ModeServer))
+		dhtOpts = append(dhtOpts, libp2pDHT.Mode(libp2pDHT.ModeServer))
 	}
-	_, err = dht.New(ctx, host, dhtOpts...)
+	dht, err := libp2pDHT.New(ctx, host, dhtOpts...)
+	if err != nil {
+		return nil, err
+	}
+	discovery, err := discoveryBackoff.NewBackoffDiscovery(
+		discoveryRouting.NewRoutingDiscovery(dht),
+		discoveryBackoff.NewFixedBackoff(1*time.Second),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +101,7 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs, dhtMode
 		pubKey:  privKey.PubKey(),
 		addr:    privKey.PubKey().Address(),
 
-		host: host,
+		host:      host,
+		discovery: discovery,
 	}, nil
 }
