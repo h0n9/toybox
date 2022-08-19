@@ -7,6 +7,7 @@ import (
 
 	libp2p "github.com/libp2p/go-libp2p"
 	libp2pHost "github.com/libp2p/go-libp2p-core/host"
+	dht "github.com/libp2p/go-libp2p-kad-dht"
 	quic "github.com/libp2p/go-libp2p-quic-transport"
 	"github.com/postie-labs/go-postie-lib/crypto"
 
@@ -23,7 +24,7 @@ type Node struct {
 	host libp2pHost.Host
 }
 
-func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs) (*Node, error) {
+func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs, dhtModeServer bool) (*Node, error) {
 	// generate private key
 	privKey, err := crypto.GenPrivKey()
 	if !bytes.Equal(seed, []byte{}) {
@@ -67,6 +68,16 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs) (*Node,
 		libp2p.Transport(quicTransport),
 		libp2p.DefaultSecurity,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	// init dht
+	dhtOpts := []dht.Option{}
+	if dhtModeServer {
+		dhtOpts = append(dhtOpts, dht.Mode(dht.ModeServer))
+	}
+	_, err = dht.New(ctx, host, dhtOpts...)
 	if err != nil {
 		return nil, err
 	}
