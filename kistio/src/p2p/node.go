@@ -105,3 +105,7 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs, dhtMode
 		discovery: discovery,
 	}, nil
 }
+
+func (n *Node) Bootstrap(addrs crypto.Addrs) error {
+	return nil
+}
