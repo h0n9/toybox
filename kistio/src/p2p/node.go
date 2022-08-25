@@ -19,7 +19,8 @@ import (
 )
 
 type Node struct {
-	ctx context.Context
+	ctx    context.Context
+	logger zerolog.Logger
 
 	privKey *crypto.PrivKey
 	pubKey  *crypto.PubKey
@@ -30,6 +31,12 @@ type Node struct {
 }
 
 func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs, dhtModeServer bool) (*Node, error) {
+	// load logger from ctx
+	logger, ok := ctx.Value("logger").(zerolog.Logger)
+	if !ok {
+		return nil, fmt.Errorf("failed to load logger from context")
+	}
+
 	// generate private key
 	privKey, err := crypto.GenPrivKey()
 	if !bytes.Equal(seed, []byte{}) {
@@ -95,7 +102,8 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs, dhtMode
 	}
 
 	return &Node{
-		ctx: ctx,
+		ctx:    ctx,
+		logger: logger,
 
 		privKey: privKey,
 		pubKey:  privKey.PubKey(),
