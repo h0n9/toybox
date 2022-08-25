@@ -694,8 +694,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/polydawn/refmt v0.0.0-20190807091052-3d65705ee9f1 h1:CskT+S6Ay54OwxBGB0R3Rsx4Muto6UnEYTyKJbyRIAI=
 github.com/polydawn/refmt v0.0.0-20190807091052-3d65705ee9f1/go.mod h1:uIp+gprXxxrWSjjklXD+mN4wed/tMfjMMmN/9+JsA9o=
-github.com/postie-labs/go-postie-lib v0.0.1 h1:N6H1bD/hQblFphuR+UYoffqyZdGVjy+N0dxKC7WjLIw=
-github.com/postie-labs/go-postie-lib v0.0.1/go.mod h1:wNuvtcn8HgpTrkR3QZzsUrlq4eBmPLVbmOYG4V7rDw4=
+github.com/postie-labs/go-postie-lib v0.0.2 h1:K/2mwAR8uikFKnocuBSq0qGuzP6l2+2w/+vzT504434=
+github.com/postie-labs/go-postie-lib v0.0.2/go.mod h1:wNuvtcn8HgpTrkR3QZzsUrlq4eBmPLVbmOYG4V7rDw4=
 github.com/prometheus/client_golang v0.8.0/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_golang v1.0.0/go.mod h1:db9x61etRT2tGnBNRi70OPL5FsnadC4Ky3P0J6CfImo=
