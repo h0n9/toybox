@@ -8,10 +8,18 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/postie-labs/go-postie-lib/crypto"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	kistio "github.com/h0n9/toybox/kistio/src"
+	"github.com/h0n9/toybox/kistio/src/p2p"
+)
+
+var (
+	seed          []byte
+	dhtModeServer bool
+	listenAddrs   crypto.Addrs
 )
 
 var Cmd = &cobra.Command{
@@ -30,7 +38,7 @@ var runCmd = &cobra.Command{
 			Logger()
 
 		// init context
-		_, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(context.Background())
 
 		// init sig channel
 		sigCh := make(chan os.Signal, 1)
@@ -55,11 +63,21 @@ var runCmd = &cobra.Command{
 		// * do something here *
 		// **********************
 
+		// init node
+		_, err := p2p.NewNode(ctx, seed, listenAddrs, dhtModeServer)
+		if err != nil {
+			logger.Err(err)
+			return
+		}
+
 		// wait until all of wait groups are done
 		wg.Wait()
 	},
 }
 
 func init() {
+	runCmd.Flags().BytesBase64Var(&seed, "seed", []byte{}, "seed for private key")
+	runCmd.Flags().BoolVar(&dhtModeServer, "dht-mode-server", false, "enable dht server mode")
+	runCmd.Flags().Var(&listenAddrs, "listen-addrs", "addrs to listen")
 	Cmd.AddCommand(runCmd)
 }
