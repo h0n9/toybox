@@ -15,6 +15,7 @@ import (
 	discoveryBackoff "github.com/libp2p/go-libp2p/p2p/discovery/backoff"
 	discoveryRouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	quic "github.com/libp2p/go-libp2p/p2p/transport/quic"
+	"github.com/multiformats/go-multiaddr"
 	"github.com/postie-labs/go-postie-lib/crypto"
 	"github.com/rs/zerolog"
 
@@ -121,7 +122,7 @@ func (n *Node) Bootstrap(addrs crypto.Addrs) error {
 	wg := sync.WaitGroup{}
 	for _, addr := range addrs {
 		wg.Add(1)
-		go func() {
+		go func(addr multiaddr.Multiaddr) {
 			defer wg.Done()
 			pi, err := peer.AddrInfoFromP2pAddr(addr)
 			if err != nil {
@@ -129,7 +130,7 @@ func (n *Node) Bootstrap(addrs crypto.Addrs) error {
 				return
 			}
 			n.host.Connect(n.ctx, *pi)
-		}()
+		}(addr)
 	}
 	wg.Wait()
 	return nil
