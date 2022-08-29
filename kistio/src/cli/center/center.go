@@ -39,6 +39,7 @@ var runCmd = &cobra.Command{
 
 		// init context
 		ctx, cancel := context.WithCancel(context.Background())
+		ctx = context.WithValue(ctx, "logger", logger)
 
 		// init sig channel
 		sigCh := make(chan os.Signal, 1)
