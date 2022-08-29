@@ -4,16 +4,19 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	libp2p "github.com/libp2p/go-libp2p"
 	libp2pDiscovery "github.com/libp2p/go-libp2p-core/discovery"
 	libp2pHost "github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p-core/peer"
 	libp2pDHT "github.com/libp2p/go-libp2p-kad-dht"
 	discoveryBackoff "github.com/libp2p/go-libp2p/p2p/discovery/backoff"
 	discoveryRouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	quic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/postie-labs/go-postie-lib/crypto"
+	"github.com/rs/zerolog"
 
 	"github.com/h0n9/toybox/kistio/src/util"
 )
@@ -115,5 +118,19 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs, dhtMode
 }
 
 func (n *Node) Bootstrap(addrs crypto.Addrs) error {
+	wg := sync.WaitGroup{}
+	for _, addr := range addrs {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			pi, err := peer.AddrInfoFromP2pAddr(addr)
+			if err != nil {
+				n.logger.Err(err)
+				return
+			}
+			n.host.Connect(n.ctx, *pi)
+		}()
+	}
+	wg.Wait()
 	return nil
 }
