@@ -17,9 +17,10 @@ import (
 )
 
 var (
-	seed          []byte
-	dhtModeServer bool
-	listenAddrs   crypto.Addrs
+	seed           []byte
+	dhtModeServer  bool
+	listenAddrs    crypto.Addrs
+	bootstrapAddrs crypto.Addrs
 )
 
 var Cmd = &cobra.Command{
@@ -65,7 +66,14 @@ var runCmd = &cobra.Command{
 		// **********************
 
 		// init node
-		_, err := p2p.NewNode(ctx, seed, listenAddrs, dhtModeServer)
+		node, err := p2p.NewNode(ctx, seed, listenAddrs, dhtModeServer)
+		if err != nil {
+			logger.Err(err)
+			return
+		}
+
+		// bootstrap node
+		err = node.Bootstrap(bootstrapAddrs...)
 		if err != nil {
 			logger.Err(err)
 			return
@@ -80,5 +88,6 @@ func init() {
 	runCmd.Flags().BytesBase64Var(&seed, "seed", []byte{}, "seed for private key")
 	runCmd.Flags().BoolVar(&dhtModeServer, "dht-mode-server", false, "enable dht server mode")
 	runCmd.Flags().Var(&listenAddrs, "listen-addrs", "addrs to listen")
+	runCmd.Flags().Var(&bootstrapAddrs, "bootstrap-addrs", "addrs to bootstrap")
 	Cmd.AddCommand(runCmd)
 }
