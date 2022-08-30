@@ -21,6 +21,7 @@ var (
 	dhtModeServer  bool
 	listenAddrs    crypto.Addrs
 	bootstrapAddrs crypto.Addrs
+	rendezVous     string
 )
 
 var Cmd = &cobra.Command{
@@ -79,6 +80,13 @@ var runCmd = &cobra.Command{
 			return
 		}
 
+		// discover peers
+		err = node.Discover(rendezVous)
+		if err != nil {
+			logger.Err(err)
+			return
+		}
+
 		// wait until all of wait groups are done
 		wg.Wait()
 	},
@@ -89,5 +97,6 @@ func init() {
 	runCmd.Flags().BoolVar(&dhtModeServer, "dht-mode-server", false, "enable dht server mode")
 	runCmd.Flags().Var(&listenAddrs, "listen-addrs", "addrs to listen")
 	runCmd.Flags().Var(&bootstrapAddrs, "bootstrap-addrs", "addrs to bootstrap")
+	runCmd.Flags().StringVar(&rendezVous, "rendez-vous", "", "rendez-vous point")
 	Cmd.AddCommand(runCmd)
 }
