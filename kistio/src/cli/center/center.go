@@ -81,11 +81,7 @@ var runCmd = &cobra.Command{
 		}
 
 		// discover peers
-		err = node.Discover(rendezVous)
-		if err != nil {
-			logger.Err(err)
-			return
-		}
+		go node.Discover(rendezVous)
 
 		// wait until all of wait groups are done
 		wg.Wait()
