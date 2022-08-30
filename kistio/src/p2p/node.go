@@ -135,3 +135,63 @@ func (n *Node) Bootstrap(addrs crypto.Addrs) error {
 	wg.Wait()
 	return nil
 }
+
+func (n *Node) Discover(rendezVous string) error {
+	peerCh, err := n.discovery.FindPeers(
+		n.ctx,
+		rendezVous,
+		libp2pDiscovery.Limit(3),
+		libp2pDiscovery.TTL(100*time.Millisecond),
+	)
+	if err != nil {
+		return err
+	}
+	ticker := time.NewTicker(1000 * time.Millisecond)
+	wg := sync.WaitGroup{}
+
+	// advertise
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer ticker.Stop()
+		for {
+			select {
+			case <-n.ctx.Done():
+				n.logger.Info().Msg("stop advertising")
+				return
+			case <-ticker.C:
+				_, err := n.discovery.Advertise(n.ctx, rendezVous)
+				if err != nil {
+					n.logger.Err(err)
+				}
+			}
+		}
+	}()
+
+	// find peers
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-n.ctx.Done():
+				n.logger.Info().Msg("stop finding peers")
+				return
+			case pi := <-peerCh:
+				if pi.ID == "" || pi.ID == n.host.ID() {
+					continue
+				}
+				err = n.host.Connect(n.ctx, pi)
+				if err != nil {
+					n.logger.Err(err)
+					continue
+				}
+				n.logger.Info().Msgf("connected to %s", pi.ID)
+			}
+		}
+	}()
+
+	wg.Wait()
+
+	return nil
+}
