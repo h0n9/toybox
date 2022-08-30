@@ -72,6 +72,8 @@ var runCmd = &cobra.Command{
 			logger.Err(err)
 			return
 		}
+		logger = logger.With().Str("id", node.GetHostID().String()).Logger()
+		logger.Info().Msg("initialized node")
 
 		// bootstrap node
 		err = node.Bootstrap(bootstrapAddrs...)
@@ -79,6 +81,7 @@ var runCmd = &cobra.Command{
 			logger.Err(err)
 			return
 		}
+		logger.Info().Msg("bootstrapped peer nodes")
 
 		// discover peers
 		go node.Discover(rendezVous)
@@ -90,7 +93,7 @@ var runCmd = &cobra.Command{
 
 func init() {
 	runCmd.Flags().BytesBase64Var(&seed, "seed", []byte{}, "seed for private key")
-	runCmd.Flags().BoolVar(&dhtModeServer, "dht-mode-server", false, "enable dht server mode")
+	runCmd.Flags().BoolVar(&dhtModeServer, "dht-mode-server", true, "enable dht server mode")
 	runCmd.Flags().Var(&listenAddrs, "listen-addrs", "addrs to listen")
 	runCmd.Flags().Var(&bootstrapAddrs, "bootstrap-addrs", "addrs to bootstrap")
 	runCmd.Flags().StringVar(&rendezVous, "rendez-vous", "", "rendez-vous point")
