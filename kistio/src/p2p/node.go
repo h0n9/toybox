@@ -120,7 +120,7 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs, dhtMode
 	}, nil
 }
 
-func (n *Node) Bootstrap(addrs crypto.Addrs) error {
+func (n *Node) Bootstrap(addrs ...multiaddr.Multiaddr) error {
 	err := n.dht.Bootstrap(n.ctx)
 	if err != nil {
 		return err
