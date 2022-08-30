@@ -31,6 +31,7 @@ type Node struct {
 	addr    crypto.Addr
 
 	host      libp2pHost.Host
+	dht       *libp2pDHT.IpfsDHT
 	discovery libp2pDiscovery.Discovery
 }
 
@@ -114,6 +115,7 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs, dhtMode
 		addr:    privKey.PubKey().Address(),
 
 		host:      host,
+		dht:       dht,
 		discovery: discovery,
 	}, nil
 }
