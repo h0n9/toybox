@@ -121,6 +121,10 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs, dhtMode
 }
 
 func (n *Node) Bootstrap(addrs crypto.Addrs) error {
+	err := n.dht.Bootstrap(n.ctx)
+	if err != nil {
+		return err
+	}
 	wg := sync.WaitGroup{}
 	for _, addr := range addrs {
 		wg.Add(1)
