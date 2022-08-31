@@ -84,7 +84,15 @@ var runCmd = &cobra.Command{
 		logger.Info().Msg("bootstrapped peer nodes")
 
 		// discover peers
-		go node.Discover(rendezVous)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := node.Discover(rendezVous)
+			if err != nil {
+				logger.Err(err)
+				return
+			}
+		}()
 
 		// wait until all of wait groups are done
 		wg.Wait()
