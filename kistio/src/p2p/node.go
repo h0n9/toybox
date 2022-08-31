@@ -11,6 +11,7 @@ import (
 	libp2pDiscovery "github.com/libp2p/go-libp2p-core/discovery"
 	libp2pHost "github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
+	libp2pPeer "github.com/libp2p/go-libp2p-core/peer"
 	libp2pDHT "github.com/libp2p/go-libp2p-kad-dht"
 	discoveryBackoff "github.com/libp2p/go-libp2p/p2p/discovery/backoff"
 	discoveryRouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
@@ -166,6 +167,7 @@ func (n *Node) Discover(rendezVous string) error {
 				n.logger.Info().Msg("stop advertising")
 				return
 			case <-ticker.C:
+				n.logger.Info().Msg("advertising")
 				_, err := n.discovery.Advertise(n.ctx, rendezVous)
 				if err != nil {
 					n.logger.Err(err)
@@ -200,4 +202,9 @@ func (n *Node) Discover(rendezVous string) error {
 	wg.Wait()
 
 	return nil
+}
+
+// getter, setter
+func (n *Node) GetHostID() libp2pPeer.ID {
+	return n.host.ID()
 }
