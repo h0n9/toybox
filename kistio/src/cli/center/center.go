@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	seed           []byte
+	seed           string
 	listenAddrs    crypto.Addrs
 	bootstrapAddrs crypto.Addrs
 	rendezVous     string
@@ -65,13 +65,19 @@ var runCmd = &cobra.Command{
 		// * do something here *
 		// **********************
 
+		// transform seed string to byte slice if not ""
+		seedBytes := []byte{}
+		if seed != "" {
+			seedBytes = []byte(seed)
+		}
+
 		// init node
-		node, err := p2p.NewNode(ctx, seed, listenAddrs, true)
+		node, err := p2p.NewNode(ctx, seedBytes, listenAddrs, true)
 		if err != nil {
 			logger.Err(err)
 			return
 		}
-		logger.Info().Str("id", node.GetHostID().String()).Msg("initialized node")
+		logger.Info().Msgf("initialized node: %s", node.GetAddr())
 
 		// bootstrap node
 		err = node.Bootstrap(bootstrapAddrs...)
@@ -98,7 +104,7 @@ var runCmd = &cobra.Command{
 }
 
 func init() {
-	runCmd.Flags().BytesBase64VarP(&seed, "seed", "s", []byte{}, "seed for private key")
+	runCmd.Flags().StringVarP(&seed, "seed", "s", "", "seed for private key")
 	runCmd.Flags().VarP(&listenAddrs, "listen", "l", "listening addresses")
 	runCmd.Flags().VarP(&bootstrapAddrs, "bootstrap", "b", "bootstrap address")
 	runCmd.Flags().StringVar(&rendezVous, "rendez-vous", "", "rendez-vous point")

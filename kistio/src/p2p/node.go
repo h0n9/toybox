@@ -208,3 +208,11 @@ func (n *Node) Discover(rendezVous string) error {
 func (n *Node) GetHostID() libp2pPeer.ID {
 	return n.host.ID()
 }
+
+func (n *Node) GetAddr() string {
+	addrs := n.host.Addrs()
+	if len(addrs) < 1 {
+		return ""
+	}
+	return fmt.Sprintf("%s/p2p/%s", addrs[0], n.host.ID())
+}
