@@ -74,7 +74,7 @@ var runCmd = &cobra.Command{
 		// init node
 		node, err := p2p.NewNode(ctx, seedBytes, listenAddrs, true)
 		if err != nil {
-			logger.Err(err)
+			logger.Err(err).Msg("")
 			return
 		}
 		logger.Info().Msgf("initialized node: %s", node.GetAddr())
@@ -82,7 +82,7 @@ var runCmd = &cobra.Command{
 		// bootstrap node
 		err = node.Bootstrap(bootstrapAddrs...)
 		if err != nil {
-			logger.Err(err)
+			logger.Err(err).Msg("")
 			return
 		}
 		logger.Info().Msg("bootstrapped peer nodes")
@@ -93,7 +93,7 @@ var runCmd = &cobra.Command{
 			defer wg.Done()
 			err := node.Discover(rendezVous)
 			if err != nil {
-				logger.Err(err)
+				logger.Err(err).Msg("")
 				return
 			}
 		}()
