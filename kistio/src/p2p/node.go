@@ -133,10 +133,14 @@ func (n *Node) Bootstrap(addrs ...multiaddr.Multiaddr) error {
 			defer wg.Done()
 			pi, err := peer.AddrInfoFromP2pAddr(addr)
 			if err != nil {
-				n.logger.Err(err)
+				n.logger.Err(err).Msg("")
 				return
 			}
-			n.host.Connect(n.ctx, *pi)
+			err = n.host.Connect(n.ctx, *pi)
+			if err != nil {
+				n.logger.Err(err).Msg("")
+				return
+			}
 		}(addr)
 	}
 	wg.Wait()
@@ -170,7 +174,7 @@ func (n *Node) Discover(rendezVous string) error {
 				n.logger.Info().Msg("advertising")
 				_, err := n.discovery.Advertise(n.ctx, rendezVous)
 				if err != nil {
-					n.logger.Err(err)
+					n.logger.Err(err).Msg("")
 				}
 			}
 		}
@@ -191,7 +195,7 @@ func (n *Node) Discover(rendezVous string) error {
 				}
 				err = n.host.Connect(n.ctx, pi)
 				if err != nil {
-					n.logger.Err(err)
+					n.logger.Err(err).Msg("")
 					continue
 				}
 				n.logger.Info().Msgf("connected to %s", pi.ID)
