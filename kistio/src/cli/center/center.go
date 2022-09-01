@@ -72,8 +72,7 @@ var runCmd = &cobra.Command{
 			logger.Err(err)
 			return
 		}
-		logger = logger.With().Str("id", node.GetHostID().String()).Logger()
-		logger.Info().Msg("initialized node")
+		logger.Info().Str("id", node.GetHostID().String()).Msg("initialized node")
 
 		// bootstrap node
 		err = node.Bootstrap(bootstrapAddrs...)
