@@ -121,6 +121,19 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs, dhtMode
 	}, nil
 }
 
+func (n *Node) Close() {
+	err := n.dht.Close()
+	if err != nil {
+		n.logger.Err(err).Msg("")
+	}
+	n.logger.Info().Msg("closed dht")
+	err = n.host.Close()
+	if err != nil {
+		n.logger.Err(err).Msg("")
+	}
+	n.logger.Info().Msg("closed host")
+}
+
 func (n *Node) Bootstrap(addrs ...multiaddr.Multiaddr) error {
 	err := n.dht.Bootstrap(n.ctx)
 	if err != nil {
@@ -172,7 +185,9 @@ func (n *Node) Discover(rendezVous string) error {
 				return
 			case <-ticker.C:
 				// skip advertising when node has no peers in routing table
-				if n.dht.RoutingTable().Size() < 1 {
+				routingTableSize := n.dht.RoutingTable().Size()
+				n.logger.Debug().Msgf("routing table size: %d", routingTableSize)
+				if routingTableSize < 1 {
 					continue
 				}
 				n.logger.Info().Msg("advertising")

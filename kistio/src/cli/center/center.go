@@ -32,6 +32,10 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "run a server for seed node and managing admission webhooks",
 	Run: func(cmd *cobra.Command, args []string) {
+		var (
+			node *p2p.Node
+		)
+
 		// init logger
 		logger := zerolog.New(os.Stderr).With().
 			Timestamp().
@@ -59,6 +63,9 @@ var runCmd = &cobra.Command{
 			sig := <-sigCh
 			logger.Info().Msg("receieved signal " + sig.String())
 			cancel()
+			if node != nil {
+				node.Close()
+			}
 		}()
 
 		// **********************
