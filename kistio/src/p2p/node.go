@@ -150,7 +150,7 @@ func (n *Node) Bootstrap(addrs ...multiaddr.Multiaddr) error {
 			continue
 		}
 		wg.Add(1)
-		go n.connect(*pi, &wg)
+		go n.Connect(*pi, &wg)
 	}
 	wg.Wait()
 	return nil
@@ -206,7 +206,7 @@ func (n *Node) Discover(rendezVous string) error {
 				return
 			case pi := <-peerCh:
 				wg.Add(1)
-				go n.connect(pi, &wg)
+				go n.Connect(pi, &wg)
 			}
 		}
 	}()
