@@ -141,9 +141,6 @@ func (n *Node) Bootstrap(addrs ...multiaddr.Multiaddr) error {
 	}
 	wg := sync.WaitGroup{}
 	for _, addr := range addrs {
-		wg.Add(1)
-		go func(addr multiaddr.Multiaddr) {
-			defer wg.Done()
 		pi, err := peer.AddrInfoFromP2pAddr(addr)
 		if err != nil {
 			n.logger.Err(err).Msg("")
@@ -186,11 +183,15 @@ func (n *Node) Discover(rendezVous string) error {
 				if routingTableSize < 1 {
 					continue
 				}
-				n.logger.Info().Msg("advertising")
-				_, err := n.discovery.Advertise(n.ctx, rendezVous)
-				if err != nil {
-					n.logger.Err(err).Msg("")
-				}
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					n.logger.Debug().Msg("advertising")
+					_, err := n.discovery.Advertise(n.ctx, rendezVous)
+					if err != nil {
+						n.logger.Err(err).Msg("")
+					}
+				}()
 			}
 		}
 	}()
