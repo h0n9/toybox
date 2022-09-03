@@ -144,17 +144,13 @@ func (n *Node) Bootstrap(addrs ...multiaddr.Multiaddr) error {
 		wg.Add(1)
 		go func(addr multiaddr.Multiaddr) {
 			defer wg.Done()
-			pi, err := peer.AddrInfoFromP2pAddr(addr)
-			if err != nil {
-				n.logger.Err(err).Msg("")
-				return
-			}
-			err = n.host.Connect(n.ctx, *pi)
-			if err != nil {
-				n.logger.Err(err).Msg("")
-				return
-			}
-		}(addr)
+		pi, err := peer.AddrInfoFromP2pAddr(addr)
+		if err != nil {
+			n.logger.Err(err).Msg("")
+			continue
+		}
+		wg.Add(1)
+		go n.connect(*pi, &wg)
 	}
 	wg.Wait()
 	return nil
@@ -209,15 +205,8 @@ func (n *Node) Discover(rendezVous string) error {
 				n.logger.Info().Msg("stop finding peers")
 				return
 			case pi := <-peerCh:
-				if pi.ID == "" || pi.ID == n.host.ID() {
-					continue
-				}
-				err = n.host.Connect(n.ctx, pi)
-				if err != nil {
-					n.logger.Err(err).Msg("")
-					continue
-				}
-				n.logger.Info().Msgf("connected to %s", pi.ID)
+				wg.Add(1)
+				go n.connect(pi, &wg)
 			}
 		}
 	}()
@@ -225,6 +214,19 @@ func (n *Node) Discover(rendezVous string) error {
 	wg.Wait()
 
 	return nil
+}
+
+func (n *Node) Connect(pi libp2pPeer.AddrInfo, wg *sync.WaitGroup) {
+	defer wg.Done()
+	if pi.ID == "" || pi.ID == n.host.ID() {
+		return
+	}
+	err := n.host.Connect(n.ctx, pi)
+	if err != nil {
+		n.logger.Err(err).Msg("")
+		return
+	}
+	n.logger.Info().Msgf("connected to %s", pi.ID)
 }
 
 // getter, setter
