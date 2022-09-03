@@ -171,6 +171,10 @@ func (n *Node) Discover(rendezVous string) error {
 				n.logger.Info().Msg("stop advertising")
 				return
 			case <-ticker.C:
+				// skip advertising when node has no peers in routing table
+				if n.dht.RoutingTable().Size() < 1 {
+					continue
+				}
 				n.logger.Info().Msg("advertising")
 				_, err := n.discovery.Advertise(n.ctx, rendezVous)
 				if err != nil {
