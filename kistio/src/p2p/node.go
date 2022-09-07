@@ -10,13 +10,11 @@ import (
 	libp2p "github.com/libp2p/go-libp2p"
 	libp2pDiscovery "github.com/libp2p/go-libp2p-core/discovery"
 	libp2pHost "github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
 	libp2pPeer "github.com/libp2p/go-libp2p-core/peer"
 	libp2pDHT "github.com/libp2p/go-libp2p-kad-dht"
 	discoveryBackoff "github.com/libp2p/go-libp2p/p2p/discovery/backoff"
 	discoveryRouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	quic "github.com/libp2p/go-libp2p/p2p/transport/quic"
-	"github.com/multiformats/go-multiaddr"
 	"github.com/postie-labs/go-postie-lib/crypto"
 	"github.com/rs/zerolog"
 
@@ -36,7 +34,7 @@ type Node struct {
 	discovery libp2pDiscovery.Discovery
 }
 
-func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs) (*Node, error) {
+func NewNode(ctx context.Context, seed []byte, listenAddrs, bootstrapAddrs crypto.Addrs) (*Node, error) {
 	// load logger from ctx
 	logger, ok := ctx.Value("logger").(zerolog.Logger)
 	if !ok {
@@ -90,9 +88,18 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs) (*Node,
 		return nil, err
 	}
 
+	// convert bootstrap multiaddrs to peerinfos
+	bootstrapPis, err := libp2pPeer.AddrInfosFromP2pAddrs(bootstrapAddrs...)
+	if err != nil {
+		return nil, err
+	}
+
 	// init dht
-	dhtOpts := []libp2pDHT.Option{}
-	dht, err := libp2pDHT.New(ctx, host, dhtOpts...)
+	dht, err := libp2pDHT.New(
+		ctx,
+		host,
+		libp2pDHT.BootstrapPeers(bootstrapPis...),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -131,23 +138,8 @@ func (n *Node) Close() {
 	n.logger.Info().Msg("closed host")
 }
 
-func (n *Node) Bootstrap(addrs ...multiaddr.Multiaddr) error {
-	err := n.dht.Bootstrap(n.ctx)
-	if err != nil {
-		return err
-	}
-	wg := sync.WaitGroup{}
-	for _, addr := range addrs {
-		pi, err := peer.AddrInfoFromP2pAddr(addr)
-		if err != nil {
-			n.logger.Err(err).Msg("")
-			continue
-		}
-		wg.Add(1)
-		go n.Connect(*pi, &wg)
-	}
-	wg.Wait()
-	return nil
+func (n *Node) Bootstrap() error {
+	return n.dht.Bootstrap(n.ctx)
 }
 
 func (n *Node) Discover(rendezVous string) error {
