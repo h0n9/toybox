@@ -79,7 +79,7 @@ var runCmd = &cobra.Command{
 		}
 
 		// init node
-		node, err := p2p.NewNode(ctx, seedBytes, listenAddrs, bootstrapAddrs)
+		node, err := p2p.NewNode(ctx, seedBytes, listenAddrs, bootstrapAddrs, false)
 		if err != nil {
 			logger.Err(err).Msg("")
 			return

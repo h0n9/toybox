@@ -34,7 +34,7 @@ type Node struct {
 	discovery libp2pDiscovery.Discovery
 }
 
-func NewNode(ctx context.Context, seed []byte, listenAddrs, bootstrapAddrs crypto.Addrs) (*Node, error) {
+func NewNode(ctx context.Context, seed []byte, listenAddrs, bootstrapAddrs crypto.Addrs, dhtServerMode bool) (*Node, error) {
 	// load logger from ctx
 	logger, ok := ctx.Value("logger").(zerolog.Logger)
 	if !ok {
@@ -95,11 +95,13 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs, bootstrapAddrs crypt
 	}
 
 	// init dht
-	dht, err := libp2pDHT.New(
-		ctx,
-		host,
+	dhtOpts := []libp2pDHT.Option{
 		libp2pDHT.BootstrapPeers(bootstrapPis...),
-	)
+	}
+	if dhtServerMode {
+		dhtOpts = append(dhtOpts, libp2pDHT.Mode(libp2pDHT.ModeServer))
+	}
+	dht, err := libp2pDHT.New(ctx, host, dhtOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -168,6 +170,8 @@ func (n *Node) Discover(rendezVous string) error {
 			case <-ticker.C:
 				// skip advertising when node has no peers in routing table
 				routingTableSize := n.dht.RoutingTable().Size()
+
+				n.logger.Debug().Msgf("peers: %v", n.dht.RoutingTable().ListPeers())
 				n.logger.Debug().Msgf("routing table size: %d", routingTableSize)
 				if routingTableSize < 1 {
 					continue
