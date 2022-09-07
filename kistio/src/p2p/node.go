@@ -36,7 +36,7 @@ type Node struct {
 	discovery libp2pDiscovery.Discovery
 }
 
-func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs, dhtModeServer bool) (*Node, error) {
+func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs) (*Node, error) {
 	// load logger from ctx
 	logger, ok := ctx.Value("logger").(zerolog.Logger)
 	if !ok {
@@ -92,9 +92,6 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs crypto.Addrs, dhtMode
 
 	// init dht
 	dhtOpts := []libp2pDHT.Option{}
-	if dhtModeServer {
-		dhtOpts = append(dhtOpts, libp2pDHT.Mode(libp2pDHT.ModeServer))
-	}
 	dht, err := libp2pDHT.New(ctx, host, dhtOpts...)
 	if err != nil {
 		return nil, err
