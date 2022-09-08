@@ -199,6 +199,9 @@ func (n *Node) Discover(rendezVous string) error {
 				n.logger.Info().Msg("stop finding peers")
 				return
 			case pi := <-peerCh:
+				if pi.ID == "" || pi.ID == n.host.ID() {
+					continue
+				}
 				wg.Add(1)
 				go n.Connect(pi, &wg)
 			}
@@ -212,9 +215,6 @@ func (n *Node) Discover(rendezVous string) error {
 
 func (n *Node) Connect(pi libp2pPeer.AddrInfo, wg *sync.WaitGroup) {
 	defer wg.Done()
-	if pi.ID == "" || pi.ID == n.host.ID() {
-		return
-	}
 	err := n.host.Connect(n.ctx, pi)
 	if err != nil {
 		n.logger.Err(err).Msg("")
