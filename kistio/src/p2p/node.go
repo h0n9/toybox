@@ -8,10 +8,10 @@ import (
 	"time"
 
 	libp2p "github.com/libp2p/go-libp2p"
-	libp2pDiscovery "github.com/libp2p/go-libp2p-core/discovery"
-	libp2pHost "github.com/libp2p/go-libp2p-core/host"
-	libp2pPeer "github.com/libp2p/go-libp2p-core/peer"
 	libp2pDHT "github.com/libp2p/go-libp2p-kad-dht"
+	libp2pDiscovery "github.com/libp2p/go-libp2p/core/discovery"
+	libp2pHost "github.com/libp2p/go-libp2p/core/host"
+	libp2pPeer "github.com/libp2p/go-libp2p/core/peer"
 	discoveryBackoff "github.com/libp2p/go-libp2p/p2p/discovery/backoff"
 	discoveryRouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	quic "github.com/libp2p/go-libp2p/p2p/transport/quic"
@@ -95,9 +95,7 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs, bootstrapAddrs crypt
 	}
 
 	// init dht
-	dhtOpts := []libp2pDHT.Option{
-		libp2pDHT.BootstrapPeers(bootstrapPis...),
-	}
+	dhtOpts := []libp2pDHT.Option{libp2pDHT.BootstrapPeers(bootstrapPis...)}
 	if dhtServerMode {
 		dhtOpts = append(dhtOpts, libp2pDHT.Mode(libp2pDHT.ModeServer))
 	}
@@ -145,15 +143,6 @@ func (n *Node) Bootstrap() error {
 }
 
 func (n *Node) Discover(rendezVous string) error {
-	peerCh, err := n.discovery.FindPeers(
-		n.ctx,
-		rendezVous,
-		libp2pDiscovery.Limit(3),
-		libp2pDiscovery.TTL(100*time.Millisecond),
-	)
-	if err != nil {
-		return err
-	}
 	ticker := time.NewTicker(1000 * time.Millisecond)
 	wg := sync.WaitGroup{}
 
@@ -193,6 +182,15 @@ func (n *Node) Discover(rendezVous string) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		peerCh, err := n.discovery.FindPeers(
+			n.ctx,
+			rendezVous,
+			libp2pDiscovery.Limit(3),
+			libp2pDiscovery.TTL(100*time.Millisecond),
+		)
+		if err != nil {
+			n.logger.Fatal().Err(err)
+		}
 		for {
 			select {
 			case <-n.ctx.Done():
