@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/libp2p/go-libp2p v0.22.0
 	github.com/libp2p/go-libp2p-kad-dht v0.18.0
+	github.com/libp2p/go-libp2p-pubsub v0.8.0
 	github.com/postie-labs/go-postie-lib v0.0.2
 	github.com/rs/zerolog v1.27.0
 	github.com/spf13/cobra v1.5.0
@@ -106,6 +107,7 @@ require (
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect
+	github.com/whyrusleeping/timecache v0.0.0-20160911033111-cfcb2f1abfee // indirect
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect

@@ -9,6 +9,7 @@ import (
 
 	libp2p "github.com/libp2p/go-libp2p"
 	libp2pDHT "github.com/libp2p/go-libp2p-kad-dht"
+	libp2pPubsub "github.com/libp2p/go-libp2p-pubsub"
 	libp2pDiscovery "github.com/libp2p/go-libp2p/core/discovery"
 	libp2pHost "github.com/libp2p/go-libp2p/core/host"
 	libp2pPeer "github.com/libp2p/go-libp2p/core/peer"
@@ -32,6 +33,7 @@ type Node struct {
 	host      libp2pHost.Host
 	dht       *libp2pDHT.IpfsDHT
 	discovery libp2pDiscovery.Discovery
+	pubsub    *libp2pPubsub.PubSub
 }
 
 func NewNode(ctx context.Context, seed []byte, listenAddrs, bootstrapAddrs crypto.Addrs) (*Node, error) {
@@ -111,6 +113,12 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs, bootstrapAddrs crypt
 		return nil, err
 	}
 
+	// init pubsub
+	pubsub, err := libp2pPubsub.NewGossipSub(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Node{
 		ctx:    ctx,
 		logger: logger,
@@ -122,6 +130,7 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs, bootstrapAddrs crypt
 		host:      host,
 		dht:       dht,
 		discovery: discovery,
+		pubsub:    pubsub,
 	}, nil
 }
 
