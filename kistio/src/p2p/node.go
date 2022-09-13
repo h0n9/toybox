@@ -32,7 +32,9 @@ type Node struct {
 	host      libp2pHost.Host
 	dht       *libp2pDHT.IpfsDHT
 	discovery libp2pDiscovery.Discovery
-	pubsub    *libp2pPubsub.PubSub
+
+	pubsub *libp2pPubsub.PubSub
+	topics map[string]*libp2pPubsub.Topic
 }
 
 func NewNode(ctx context.Context, seed []byte, listenAddrs, bootstrapAddrs crypto.Addrs) (*Node, error) {
@@ -134,6 +136,12 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs, bootstrapAddrs crypt
 }
 
 func (n *Node) Close() {
+	for _, topic := range n.topics {
+		err := topic.Close()
+		if err != nil {
+			n.logger.Err(err).Msg("")
+		}
+	}
 	err := n.dht.Close()
 	if err != nil {
 		n.logger.Err(err).Msg("")
