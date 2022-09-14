@@ -19,10 +19,19 @@ func (n *Node) JoinTopic(name string) (*libp2pPubsub.Topic, error) {
 	return topic, err
 }
 
+func (n *Node) GetTopic(name string) (*libp2pPubsub.Topic, error) {
+	return n.getTopic(name)
+}
+
 func (n *Node) checkTopic(name string) error {
-	_, exist := n.topics[name]
+	_, err := n.getTopic(name)
+	return err
+}
+
+func (n *Node) getTopic(name string) (*libp2pPubsub.Topic, error) {
+	topic, exist := n.topics[name]
 	if exist {
-		return fmt.Errorf("found '%s' in topic list", name)
+		return nil, fmt.Errorf("found '%s' in topic list", name)
 	}
-	return nil
+	return topic, nil
 }
