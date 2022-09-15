@@ -131,7 +131,9 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs, bootstrapAddrs crypt
 		host:      host,
 		dht:       dht,
 		discovery: discovery,
-		pubsub:    pubsub,
+
+		pubsub: pubsub,
+		topics: map[string]*libp2pPubsub.Topic{},
 	}, nil
 }
 
