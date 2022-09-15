@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/postie-labs/go-postie-lib/crypto"
 	"github.com/rs/zerolog"
@@ -102,6 +103,52 @@ var runCmd = &cobra.Command{
 			if err != nil {
 				logger.Err(err).Msg("")
 				return
+			}
+		}()
+
+		// say something
+		topic, err := node.JoinTopic("hello world")
+		if err != nil {
+			logger.Err(err).Msg("")
+			return
+		}
+		sub, err := topic.Subscribe()
+		if err != nil {
+			logger.Err(err).Msg("")
+			return
+		}
+		defer sub.Cancel()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				msg, err := sub.Next(ctx)
+				if err != nil {
+					logger.Err(err).Msg("")
+					break
+				}
+				if msg.GetFrom() == node.GetHostID() {
+					continue
+				}
+				logger.Info().Msgf("%s - %s (%d)", msg.GetData(), msg.GetFrom(), len(topic.ListPeers()))
+			}
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ticker := time.NewTicker(1 * time.Second)
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					err = topic.Publish(ctx, []byte("hello world"))
+					if err != nil {
+						logger.Err(err).Msg("")
+					}
+				}
 			}
 		}()
 
