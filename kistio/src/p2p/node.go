@@ -98,9 +98,9 @@ func NewNode(ctx context.Context, seed []byte, listenAddrs, bootstrapAddrs crypt
 	}
 
 	// init dht
-	dhtOpts := []libp2pDHT.Option{libp2pDHT.BootstrapPeers(bootstrapPis...)}
-	if len(bootstrapAddrs) < 1 {
-		dhtOpts = append(dhtOpts, libp2pDHT.Mode(libp2pDHT.ModeServer))
+	dhtOpts := []libp2pDHT.Option{
+		libp2pDHT.BootstrapPeers(bootstrapPis...),
+		libp2pDHT.Mode(libp2pDHT.ModeServer),
 	}
 	dht, err := libp2pDHT.New(ctx, host, dhtOpts...)
 	if err != nil {
