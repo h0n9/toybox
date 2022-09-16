@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/libp2p/go-libp2p v0.22.0
+	github.com/libp2p/go-libp2p-discovery v0.7.0
 	github.com/libp2p/go-libp2p-kad-dht v0.18.0
 	github.com/libp2p/go-libp2p-pubsub v0.8.0
 	github.com/postie-labs/go-postie-lib v0.0.2
