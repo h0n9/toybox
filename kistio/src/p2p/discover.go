@@ -72,6 +72,7 @@ func (n *Node) Discover(rendezVous string) error {
 				wg.Add(1)
 				go n.Connect(pi, &wg)
 			}
+			time.Sleep(1 * time.Second)
 		}
 	}()
 
