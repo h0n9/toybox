@@ -7,7 +7,7 @@ import "proto/msg.proto";
 
 service Lake {
     rpc Send(SendReq) returns (SendRes);
-    rpc Recv(RecvReq) returns (RecvRes);
+    rpc Recv(RecvReq) returns (stream RecvRes);
 }
 
 message SendReq {
