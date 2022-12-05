@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+option go_package = "github.com/h0n9/toybox/msg-lake/proto";
+
+import "proto/types.proto";
+import "proto/msg.proto";
+
+service Lake {
+    rpc Send(SendReq) returns (SendRes);
+    rpc Recv(RecvReq) returns (RecvRes);
+}
+
+message SendReq {
+    Msg msg = 1;
+}
+
+message SendRes {
+    bool ok = 1;
+}
+
+message RecvReq {
+    Address address = 1;
+}
+
+message RecvRes {
+    Msg msg = 1;
+}

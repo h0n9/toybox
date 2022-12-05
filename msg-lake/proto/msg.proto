@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+option go_package = "github.com/h0n9/toybox/msg-lake/proto";
+
+import "proto/types.proto";
+
+message Msg {
+    Address from = 1;
+    Address to = 2;
+    Data data = 3;
+}
