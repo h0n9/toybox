@@ -20,7 +20,7 @@ message SendRes {
 }
 
 message RecvReq {
-    Address address = 1;
+    ID id = 1;
 }
 
 message RecvRes {
