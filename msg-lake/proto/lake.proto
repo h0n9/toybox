@@ -11,7 +11,8 @@ service Lake {
 }
 
 message SendReq {
-    Msg msg = 1;
+    ID id = 1;
+    Msg msg = 2;
 }
 
 message SendRes {
