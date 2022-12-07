@@ -2,7 +2,6 @@ syntax = "proto3";
 
 option go_package = "github.com/h0n9/toybox/msg-lake/proto";
 
-import "proto/types.proto";
 import "proto/msg.proto";
 
 service Lake {
@@ -11,7 +10,7 @@ service Lake {
 }
 
 message SendReq {
-    ID id = 1;
+    string id = 1;
     Msg msg = 2;
 }
 
@@ -20,7 +19,7 @@ message SendRes {
 }
 
 message RecvReq {
-    ID id = 1;
+    string id = 1;
 }
 
 message RecvRes {

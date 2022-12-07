@@ -2,10 +2,6 @@ syntax = "proto3";
 
 option go_package = "github.com/h0n9/toybox/msg-lake/proto";
 
-message ID {
-    string id = 1;
-}
-
 message Address {
     string address = 1;
 }
