@@ -2,6 +2,7 @@ package lake
 
 import (
 	"container/list"
+	"context"
 	"fmt"
 
 	pb "github.com/h0n9/toybox/msg-lake/proto"
@@ -10,12 +11,12 @@ import (
 type LakeServer struct {
 	pb.UnimplementedLakeServer
 
-	msgs map[*pb.ID]*list.List
+	msgs map[string]*list.List
 }
 
 func NewLakeServer() *LakeServer {
 	return &LakeServer{
-		msgs: map[*pb.ID]*list.List{},
+		msgs: map[string]*list.List{},
 	}
 }
 
@@ -23,7 +24,7 @@ func (ls *LakeServer) Close() {
 	// TODO: implement Close() method
 }
 
-func (ls *LakeServer) Send(req *pb.SendReq) (*pb.SendRes, error) {
+func (ls *LakeServer) Send(ctx context.Context, req *pb.SendReq) (*pb.SendRes, error) {
 	id := req.GetId()
 	msg := req.GetMsg()
 
