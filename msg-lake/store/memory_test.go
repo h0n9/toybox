@@ -7,8 +7,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/h0n9/toybox/msg-lake/proto"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/h0n9/toybox/msg-lake/proto"
 )
 
 func TestMsgStoreMemory(t *testing.T) {
