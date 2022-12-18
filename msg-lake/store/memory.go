@@ -18,16 +18,12 @@ func NewMsgBox() *MsgBox {
 	}
 }
 
-func (box *MsgBox) Len() int {
-	return len(box.msgs)
-}
-
-func (box *MsgBox) Append(msg *proto.Msg) error {
+func (box *MsgBox) AppendMsg(msg *proto.Msg) error {
 	box.msgs = append(box.msgs, msg)
 	return nil
 }
 
-func (box *MsgBox) Get(consumerID string) (*proto.Msg, error) {
+func (box *MsgBox) GetMsg(consumerID string) (*proto.Msg, error) {
 	// get consumer offset
 	consumerOffset, exist := box.consumers[consumerID]
 	if !exist {
@@ -48,6 +44,18 @@ func (box *MsgBox) Get(consumerID string) (*proto.Msg, error) {
 	return box.msgs[consumerOffset], nil
 }
 
+func (box *MsgBox) Len() int {
+	return len(box.msgs)
+}
+
+func (box *MsgBox) Behind(consumerID string) int {
+	consumerOffset, exist := box.consumers[consumerID]
+	if !exist {
+		return len(box.msgs)
+	}
+	return len(box.msgs) - consumerOffset
+}
+
 type MsgStoreMemory struct {
 	msgBoxes map[string]*MsgBox // <msg_box_id>:<msg_box>
 }
@@ -64,7 +72,7 @@ func (store *MsgStoreMemory) Push(msgBoxID string, msg *proto.Msg) error {
 		msgBox = NewMsgBox()
 		store.msgBoxes[msgBoxID] = msgBox
 	}
-	return msgBox.Append(msg)
+	return msgBox.AppendMsg(msg)
 }
 
 func (store *MsgStoreMemory) Pop(msgBoxID, consumerID string) (*proto.Msg, error) {
@@ -72,7 +80,7 @@ func (store *MsgStoreMemory) Pop(msgBoxID, consumerID string) (*proto.Msg, error
 	if !exist {
 		return nil, fmt.Errorf("failed to find msg box corresponding to id(%s)", msgBoxID)
 	}
-	return msgBox.Get(consumerID)
+	return msgBox.GetMsg(consumerID)
 }
 
 func (store *MsgStoreMemory) Len(msgBoxID string) int {
@@ -81,4 +89,12 @@ func (store *MsgStoreMemory) Len(msgBoxID string) int {
 		return 0
 	}
 	return msgBox.Len()
+}
+
+func (store *MsgStoreMemory) Behind(msgBoxID, consumerID string) int {
+	msgBox, exist := store.msgBoxes[msgBoxID]
+	if !exist {
+		return -1
+	}
+	return msgBox.Behind(consumerID)
 }

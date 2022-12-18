@@ -16,7 +16,7 @@ func TestMsgStoreMemory(t *testing.T) {
 	// const
 	const (
 		numOfMsgs        int    = 1000
-		numOfConsumers   int    = 10000
+		numOfConsumers   int    = 5000
 		msgBoxID         string = "test"
 		consumerIDPrefix string = "test-consumer"
 	)
