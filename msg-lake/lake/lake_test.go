@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"sync"
 	"testing"
-	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -69,8 +68,8 @@ func TestLake(t *testing.T) {
 			res, err := sender.Send(
 				ctx,
 				&pb.SendReq{
-					Id:  "test",
-					Msg: sampleMsg,
+					MsgBoxId: "test",
+					Msg:      sampleMsg,
 				},
 			)
 			assert.NoError(t, err)
@@ -81,24 +80,21 @@ func TestLake(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		time.Sleep(1 * time.Second)
-		stream, err := recver.Recv(ctx, &pb.RecvReq{Id: "test"})
-		assert.NoError(t, err)
-		defer stream.CloseSend()
-		for i := range sampleMsgs {
-			data, err := stream.Recv()
+		count := 0
+		for count < 1000 {
+			stream, err := recver.Recv(ctx, &pb.RecvReq{
+				MsgBoxId:   "test",
+				ConsumerId: "test-consumer",
+			})
 			assert.NoError(t, err)
-			msg := data.GetMsg()
-			assert.Equal(
-				t,
-				sampleMsgs[i].GetFrom().GetAddress(),
-				msg.GetFrom().GetAddress(),
-			)
-			assert.Equal(
-				t,
-				sampleMsgs[i].GetData().GetData(),
-				msg.GetData().GetData(),
-			)
+			for {
+				_, err := stream.Recv()
+				if err != nil {
+					break
+				}
+				count += 1
+			}
+			stream.CloseSend()
 		}
 		done <- true
 	}()

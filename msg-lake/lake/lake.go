@@ -25,7 +25,7 @@ func (ls *LakeServer) Close() {
 }
 
 func (ls *LakeServer) Send(ctx context.Context, req *proto.SendReq) (*proto.SendRes, error) {
-	err := ls.msgStore.Push(req.GetId(), req.GetMsg())
+	err := ls.msgStore.Push(req.GetMsgBoxId(), req.GetMsg())
 	if err != nil {
 		return nil, err
 	}
@@ -33,8 +33,10 @@ func (ls *LakeServer) Send(ctx context.Context, req *proto.SendReq) (*proto.Send
 }
 
 func (ls *LakeServer) Recv(req *proto.RecvReq, stream proto.Lake_RecvServer) error {
-	for ls.msgStore.Len(req.GetId()) > 0 {
-		msg, err := ls.msgStore.Pop(req.GetId())
+	msgBoxID := req.GetMsgBoxId()
+	consumerID := req.GetConsumerId()
+	for ls.msgStore.Behind(msgBoxID, consumerID) > 0 {
+		msg, err := ls.msgStore.Pop(msgBoxID, consumerID)
 		if err != nil {
 			return err
 		}
