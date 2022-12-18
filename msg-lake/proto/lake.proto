@@ -10,7 +10,7 @@ service Lake {
 }
 
 message SendReq {
-    string id = 1;
+    string msg_box_id = 1;
     Msg msg = 2;
 }
 
@@ -19,7 +19,8 @@ message SendRes {
 }
 
 message RecvReq {
-    string id = 1;
+    string msg_box_id = 1;
+    string consumer_id = 2;
 }
 
 message RecvRes {
