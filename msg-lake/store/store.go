@@ -6,6 +6,7 @@ import (
 
 type MsgStore interface {
 	Push(id string, msg *pb.Msg) error
-	Pop(id string) (*pb.Msg, error)
+	Pop(id, consumer string) (*pb.Msg, error)
 	Len(id string) int
+	Behind(id, consumer string) int
 }
