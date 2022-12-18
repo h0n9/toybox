@@ -15,31 +15,37 @@ import (
 func TestMsgStoreMemory(t *testing.T) {
 	// const
 	const (
-		N  int    = 1000
-		ID string = "test"
+		numOfMsgs        int    = 1000
+		numOfConsumers   int    = 10000
+		msgBoxID         string = "test"
+		consumerIDPrefix string = "test-consumer"
 	)
 
 	ms := NewMsgStoreMemory()
-	assert.Equal(t, 0, len(ms.msgs))
-	assert.Equal(t, 0, ms.Len(ID))
+	assert.Equal(t, 0, len(ms.msgBoxes))
+	assert.Equal(t, 0, ms.Len(msgBoxID))
 
-	for i := 0; i < N; i++ {
+	for i := 0; i < numOfMsgs; i++ {
 		hash := sha256.Sum256([]byte(strconv.Itoa(rand.Int())))
-		ms.Push(ID, &proto.Msg{
+		ms.Push(msgBoxID, &proto.Msg{
 			From: &proto.Address{Address: fmt.Sprintf("addr-%d", i)},
 			Data: &proto.Data{Data: hash[:]},
 		})
 	}
 
-	assert.Equal(t, 1, len(ms.msgs))
-	assert.Equal(t, N, ms.Len(ID))
+	assert.Equal(t, 1, len(ms.msgBoxes))
+	assert.Equal(t, numOfMsgs, ms.Len(msgBoxID))
+	assert.Equal(t, 0, len(ms.msgBoxes[msgBoxID].consumers))
 
-	for i := 0; i < N; i++ {
-		msg, err := ms.Pop(ID)
-		assert.NoError(t, err)
-		assert.Equal(t, fmt.Sprintf("addr-%d", i), msg.GetFrom().GetAddress())
+	for i := 0; i < numOfConsumers; i++ {
+		for j := 0; j < numOfMsgs; j++ {
+			msg, err := ms.Pop(msgBoxID, fmt.Sprintf("%s-%d", consumerIDPrefix, i))
+			assert.NoError(t, err)
+			assert.Equal(t, fmt.Sprintf("addr-%d", j), msg.GetFrom().GetAddress())
+		}
 	}
 
-	assert.Equal(t, 1, len(ms.msgs))
-	assert.Equal(t, 0, ms.Len(ID))
+	assert.Equal(t, 1, len(ms.msgBoxes))
+	assert.Equal(t, numOfMsgs, ms.Len(msgBoxID))
+	assert.Equal(t, numOfConsumers, len(ms.msgBoxes[msgBoxID].consumers))
 }
