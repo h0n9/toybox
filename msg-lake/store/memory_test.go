@@ -35,7 +35,6 @@ func TestMsgStoreMemory(t *testing.T) {
 
 	assert.Equal(t, 1, len(ms.msgBoxes))
 	assert.Equal(t, numOfMsgs, ms.Len(msgBoxID))
-	assert.Equal(t, 0, len(ms.msgBoxes[msgBoxID].consumers))
 
 	for i := 0; i < numOfConsumers; i++ {
 		for j := 0; j < numOfMsgs; j++ {
@@ -47,5 +46,4 @@ func TestMsgStoreMemory(t *testing.T) {
 
 	assert.Equal(t, 1, len(ms.msgBoxes))
 	assert.Equal(t, numOfMsgs, ms.Len(msgBoxID))
-	assert.Equal(t, numOfConsumers, len(ms.msgBoxes[msgBoxID].consumers))
 }

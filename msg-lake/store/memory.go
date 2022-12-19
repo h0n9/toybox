@@ -2,19 +2,20 @@ package store
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/h0n9/toybox/msg-lake/proto"
 )
 
 type MsgBox struct {
 	msgs      []*proto.Msg
-	consumers map[string]int // <consumer_id>:<consumer_offset>
+	consumers *sync.Map // <consumer_id>:<consumer_offset>
 }
 
 func NewMsgBox() *MsgBox {
 	return &MsgBox{
 		msgs:      make([]*proto.Msg, 0),
-		consumers: make(map[string]int),
+		consumers: &sync.Map{},
 	}
 }
 
@@ -25,10 +26,12 @@ func (box *MsgBox) AppendMsg(msg *proto.Msg) error {
 
 func (box *MsgBox) GetMsg(consumerID string) (*proto.Msg, error) {
 	// get consumer offset
-	consumerOffset, exist := box.consumers[consumerID]
-	if !exist {
-		consumerOffset = 0
-		box.consumers[consumerID] = consumerOffset
+	consumerOffset := 0
+	value, exist := box.consumers.Load(consumerID)
+	if exist {
+		consumerOffset = value.(int)
+	} else {
+		box.consumers.Store(consumerID, consumerOffset)
 	}
 
 	// check constraints
@@ -38,7 +41,7 @@ func (box *MsgBox) GetMsg(consumerID string) (*proto.Msg, error) {
 
 	// update consumer offset
 	if consumerOffset+1 <= len(box.msgs) {
-		box.consumers[consumerID] = consumerOffset + 1
+		box.consumers.Store(consumerID, consumerOffset+1)
 	}
 
 	return box.msgs[consumerOffset], nil
@@ -49,11 +52,11 @@ func (box *MsgBox) Len() int {
 }
 
 func (box *MsgBox) Behind(consumerID string) int {
-	consumerOffset, exist := box.consumers[consumerID]
+	value, exist := box.consumers.Load(consumerID)
 	if !exist {
 		return len(box.msgs)
 	}
-	return len(box.msgs) - consumerOffset
+	return len(box.msgs) - value.(int)
 }
 
 type MsgStoreMemory struct {
