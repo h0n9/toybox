@@ -1,13 +1,17 @@
 package client
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
@@ -65,6 +69,10 @@ var Cmd = &cobra.Command{
 		}
 		cli := proto.NewLakeClient(conn)
 
+		r := rand.New(rand.NewSource(time.Now().Unix())).Int()
+		consumerID := fmt.Sprintf("test-consumer-%d", r)
+		producerID := fmt.Sprintf("test-producer-%d", r)
+
 		// execute goroutine (receiver)
 		wg.Add(1)
 		go func() {
@@ -72,7 +80,7 @@ var Cmd = &cobra.Command{
 
 			stream, err := cli.Recv(ctx, &proto.RecvReq{
 				MsgBoxId:   "test",
-				ConsumerId: "test-consumer-0",
+				ConsumerId: consumerID,
 			})
 			if err != nil {
 				fmt.Println(err)
@@ -91,42 +99,46 @@ var Cmd = &cobra.Command{
 				}
 
 				msg := data.GetMsg()
-				fmt.Printf("%s> %s", msg.GetFrom(), msg.GetData())
+				if msg.GetFrom().GetAddress() == producerID {
+					continue
+				}
+				fmt.Printf("\r\n📩 <%s> %s\r\n", msg.GetFrom().GetAddress(), msg.GetData().GetData())
 			}
 
 		}()
 
 		// execute goroutine (sender)
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
-			var input string
-			for loop := true; loop; {
-				select {
-				case <-ctx.Done():
-					loop = false
-				default:
-					fmt.Printf("\r\n🎙️> ")
-					fmt.Scanln(&input)
-					res, err := cli.Send(ctx, &proto.SendReq{
-						MsgBoxId: "test",
-						Msg: &proto.Msg{
-							From: &proto.Address{
-								Address: "test-producer-0",
-							},
-							Data: &proto.Data{
-								Data: []byte(input),
-							},
+			reader := bufio.NewReader(os.Stdin)
+			for {
+				fmt.Printf("\r\n️️💬 <%s> ", producerID)
+				input, err := reader.ReadString('\n')
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+				input = strings.TrimSuffix(input, "\n")
+				if input == "" {
+					continue
+				}
+				res, err := cli.Send(ctx, &proto.SendReq{
+					MsgBoxId: "test",
+					Msg: &proto.Msg{
+						From: &proto.Address{
+							Address: producerID,
 						},
-					})
-					if err != nil {
-						fmt.Println(err)
-						continue
-					}
+						Data: &proto.Data{
+							Data: []byte(input),
+						},
+					},
+				})
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
 
-					if !res.Ok {
-						fmt.Println("failed to send msg")
-					}
+				if !res.Ok {
+					fmt.Println("failed to send msg")
 				}
 			}
 		}()
