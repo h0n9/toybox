@@ -97,6 +97,7 @@ var Cmd = &cobra.Command{
 				}
 				if err != nil {
 					fmt.Println(err)
+					sigCh <- syscall.SIGINT
 					break
 				}
 
@@ -106,7 +107,6 @@ var Cmd = &cobra.Command{
 				}
 				fmt.Printf("\r\n📩 <%s> %s\r\n", msg.GetFrom().GetAddress(), msg.GetData().GetData())
 			}
-
 		}()
 
 		// execute goroutine (sender)
