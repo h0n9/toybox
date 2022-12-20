@@ -54,15 +54,16 @@ var Cmd = &cobra.Command{
 			sig := <-sigCh
 			fmt.Println("\r\ngot", sig.String())
 
-			fmt.Printf("cancelling ctx ... ")
-			cancel()
-			fmt.Printf("done\n")
-
 			if conn != nil {
 				fmt.Printf("closing grpc client ... ")
 				conn.Close()
 				fmt.Printf("done\n")
 			}
+
+			fmt.Printf("cancelling ctx ... ")
+			cancel()
+			fmt.Printf("done\n")
+
 		}()
 
 		// init grpc client
