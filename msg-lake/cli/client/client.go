@@ -22,6 +22,12 @@ import (
 	"github.com/h0n9/toybox/msg-lake/proto"
 )
 
+var (
+	hostAddr               string
+	msgBoxID               string
+	producerID, consumerID string
+)
+
 var Cmd = &cobra.Command{
 	Use:   "client",
 	Short: "runs msg lake client (interactive)",
@@ -63,15 +69,11 @@ var Cmd = &cobra.Command{
 		grpcOpts := []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		}
-		conn, err := grpc.Dial("localhost:8080", grpcOpts...)
+		conn, err := grpc.Dial(hostAddr, grpcOpts...)
 		if err != nil {
 			return err
 		}
 		cli := proto.NewLakeClient(conn)
-
-		r := rand.New(rand.NewSource(time.Now().Unix())).Int()
-		consumerID := fmt.Sprintf("test-consumer-%d", r)
-		producerID := fmt.Sprintf("test-producer-%d", r)
 
 		// execute goroutine (receiver)
 		wg.Add(1)
@@ -79,7 +81,7 @@ var Cmd = &cobra.Command{
 			defer wg.Done()
 
 			stream, err := cli.Recv(ctx, &proto.RecvReq{
-				MsgBoxId:   "test",
+				MsgBoxId:   msgBoxID,
 				ConsumerId: consumerID,
 			})
 			if err != nil {
@@ -122,7 +124,7 @@ var Cmd = &cobra.Command{
 					continue
 				}
 				res, err := cli.Send(ctx, &proto.SendReq{
-					MsgBoxId: "test",
+					MsgBoxId: msgBoxID,
 					Msg: &proto.Msg{
 						From: &proto.Address{
 							Address: producerID,
@@ -147,4 +149,13 @@ var Cmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func init() {
+	r := rand.New(rand.NewSource(time.Now().Unix())).Int()
+
+	Cmd.Flags().StringVar(&hostAddr, "host", "localhost:8080", "host addr")
+	Cmd.Flags().StringVarP(&msgBoxID, "box", "b", "test", "msg box id")
+	Cmd.Flags().StringVarP(&producerID, "producer", "p", fmt.Sprintf("test-producer-%d", r), "producer id")
+	Cmd.Flags().StringVarP(&consumerID, "consumer", "c", fmt.Sprintf("test-consumer-%d", r), "consumer id")
 }
