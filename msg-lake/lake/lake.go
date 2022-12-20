@@ -25,7 +25,7 @@ func (ls *LakeServer) Close() {
 }
 
 func (ls *LakeServer) Send(ctx context.Context, req *proto.SendReq) (*proto.SendRes, error) {
-	err := ls.msgStore.Push(req.GetMsgBoxId(), req.GetMsg())
+	err := ls.msgStore.Produce(req.GetMsgBoxId(), req.GetMsg())
 	if err != nil {
 		return nil, err
 	}
@@ -35,17 +35,22 @@ func (ls *LakeServer) Send(ctx context.Context, req *proto.SendReq) (*proto.Send
 func (ls *LakeServer) Recv(req *proto.RecvReq, stream proto.Lake_RecvServer) error {
 	msgBoxID := req.GetMsgBoxId()
 	consumerID := req.GetConsumerId()
-	for ls.msgStore.Behind(msgBoxID, consumerID) > 0 {
-		msg, err := ls.msgStore.Pop(msgBoxID, consumerID)
-		if err != nil {
-			return err
-		}
-		err = stream.Send(&proto.RecvRes{Msg: msg})
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
+
+	consumerChan, err := ls.msgStore.Consume(msgBoxID, consumerID)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	for {
+		select {
+		case <-stream.Context().Done():
+			return nil
+		case msg := <-consumerChan:
+			err = stream.Send(&proto.RecvRes{Msg: msg})
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+		}
+	}
 }
