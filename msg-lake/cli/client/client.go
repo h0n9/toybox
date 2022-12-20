@@ -30,7 +30,7 @@ var (
 
 var Cmd = &cobra.Command{
 	Use:   "client",
-	Short: "runs msg lake client (interactive)",
+	Short: "run msg lake client (interactive)",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var (
 			conn *grpc.ClientConn
