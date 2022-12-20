@@ -1,21 +1,22 @@
 package store
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/h0n9/toybox/msg-lake/proto"
 )
 
 type MsgBox struct {
-	msgs      []*proto.Msg
-	consumers *sync.Map // <consumer_id>:<consumer_offset>
+	msgs            []*proto.Msg
+	consumerChans   map[string]chan *proto.Msg // <consumer_id>:<consumer_chan>
+	consumerOffsets *sync.Map                  // <consumer_id>:<consumer_offset>
 }
 
 func NewMsgBox() *MsgBox {
 	return &MsgBox{
-		msgs:      make([]*proto.Msg, 0),
-		consumers: &sync.Map{},
+		msgs:            make([]*proto.Msg, 0),
+		consumerChans:   make(map[string]chan *proto.Msg, 0),
+		consumerOffsets: &sync.Map{},
 	}
 }
 
@@ -24,39 +25,18 @@ func (box *MsgBox) AppendMsg(msg *proto.Msg) error {
 	return nil
 }
 
-func (box *MsgBox) GetMsg(consumerID string) (*proto.Msg, error) {
-	// get consumer offset
-	consumerOffset := 0
-	value, exist := box.consumers.Load(consumerID)
-	if exist {
-		consumerOffset = value.(int)
-	} else {
-		box.consumers.Store(consumerID, consumerOffset)
-	}
-
-	// check constraints
-	if consumerOffset > len(box.msgs) {
-		return nil, fmt.Errorf("offset cannot exceed length of msg box")
-	}
-
-	// update consumer offset
-	if consumerOffset+1 <= len(box.msgs) {
-		box.consumers.Store(consumerID, consumerOffset+1)
-	}
-
-	return box.msgs[consumerOffset], nil
+func (box *MsgBox) IncrementConsumerOffset(consumerID string) {
+	value, _ := box.consumerOffsets.LoadOrStore(consumerID, 0)
+	box.consumerOffsets.Store(consumerID, value.(int)+1)
 }
 
-func (box *MsgBox) Len() int {
-	return len(box.msgs)
-}
-
-func (box *MsgBox) Behind(consumerID string) int {
-	value, exist := box.consumers.Load(consumerID)
+func (box *MsgBox) CreateConsumerChan(consumerID string) chan *proto.Msg {
+	consumerChan, exist := box.consumerChans[consumerID]
 	if !exist {
-		return len(box.msgs)
+		consumerChan = make(chan *proto.Msg)
+		box.consumerChans[consumerID] = consumerChan
 	}
-	return len(box.msgs) - value.(int)
+	return consumerChan
 }
 
 type MsgStoreMemory struct {
@@ -69,35 +49,38 @@ func NewMsgStoreMemory() *MsgStoreMemory {
 	}
 }
 
-func (store *MsgStoreMemory) Push(msgBoxID string, msg *proto.Msg) error {
+func (store *MsgStoreMemory) Produce(msgBoxID string, msg *proto.Msg) error {
 	msgBox, exist := store.msgBoxes[msgBoxID]
 	if !exist {
 		msgBox = NewMsgBox()
 		store.msgBoxes[msgBoxID] = msgBox
 	}
-	return msgBox.AppendMsg(msg)
+
+	// 1. store msg
+	err := msgBox.AppendMsg(msg)
+	if err != nil {
+		return err
+	}
+
+	for consumerID, consumerChan := range msgBox.consumerChans {
+		// 2. distribute msgs to consumers
+		consumerChan <- msg
+		// 3. update consumer's offset
+		msgBox.IncrementConsumerOffset(consumerID)
+	}
+
+	return nil
 }
 
-func (store *MsgStoreMemory) Pop(msgBoxID, consumerID string) (*proto.Msg, error) {
+func (store *MsgStoreMemory) Consume(msgBoxID, consumerID string) (chan *proto.Msg, error) {
 	msgBox, exist := store.msgBoxes[msgBoxID]
 	if !exist {
-		return nil, fmt.Errorf("failed to find msg box corresponding to id(%s)", msgBoxID)
+		msgBox = NewMsgBox()
+		store.msgBoxes[msgBoxID] = msgBox
 	}
-	return msgBox.GetMsg(consumerID)
-}
 
-func (store *MsgStoreMemory) Len(msgBoxID string) int {
-	msgBox, exist := store.msgBoxes[msgBoxID]
-	if !exist {
-		return 0
-	}
-	return msgBox.Len()
-}
+	// 1. create consumer channel
+	consumerChan := msgBox.CreateConsumerChan(consumerID)
 
-func (store *MsgStoreMemory) Behind(msgBoxID, consumerID string) int {
-	msgBox, exist := store.msgBoxes[msgBoxID]
-	if !exist {
-		return -1
-	}
-	return msgBox.Behind(consumerID)
+	return consumerChan, nil
 }
