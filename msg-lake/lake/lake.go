@@ -44,7 +44,7 @@ func (ls *LakeServer) Recv(req *proto.RecvReq, stream proto.Lake_RecvServer) err
 	for {
 		select {
 		case <-stream.Context().Done():
-			return nil
+			return ls.msgStore.Stop(msgBoxID, consumerID)
 		case msg := <-consumerChan:
 			err = stream.Send(&proto.RecvRes{Msg: msg})
 			if err != nil {

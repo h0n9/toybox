@@ -6,5 +6,6 @@ import (
 
 type MsgStore interface {
 	Produce(msgBoxID string, msg *proto.Msg) error
-	Consume(msgBoxID, consumerID string) (chan *proto.Msg, error)
+	Consume(msgBoxID, consumerID string) (<-chan *proto.Msg, error)
+	Stop(msgBoxID, consumerID string) error
 }
