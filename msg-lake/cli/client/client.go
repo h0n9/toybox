@@ -95,7 +95,7 @@ var Cmd = &cobra.Command{
 				}
 				if err != nil {
 					fmt.Println(err)
-					continue
+					break
 				}
 
 				msg := data.GetMsg()
