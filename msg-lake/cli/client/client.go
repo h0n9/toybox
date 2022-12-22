@@ -156,7 +156,7 @@ func init() {
 	r := rand.New(rand.NewSource(time.Now().Unix())).Int()
 
 	Cmd.Flags().StringVar(&hostAddr, "host", "localhost:8080", "host addr")
-	Cmd.Flags().StringVarP(&msgBoxID, "box", "b", "test", "msg box id")
+	Cmd.Flags().StringVarP(&msgBoxID, "box", "b", "life is beautiful", "msg box id")
 	Cmd.Flags().StringVarP(&producerID, "producer", "p", fmt.Sprintf("test-producer-%d", r), "producer id")
 	Cmd.Flags().StringVarP(&consumerID, "consumer", "c", fmt.Sprintf("test-consumer-%d", r), "consumer id")
 }
