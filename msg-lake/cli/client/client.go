@@ -3,6 +3,7 @@ package client
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"math/rand"
@@ -16,13 +17,14 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 
 	"github.com/h0n9/toybox/msg-lake/proto"
 )
 
 var (
+	tlsEnabled             bool
 	hostAddr               string
 	msgBoxID               string
 	producerID, consumerID string
@@ -67,8 +69,10 @@ var Cmd = &cobra.Command{
 		}()
 
 		// init grpc client
-		grpcOpts := []grpc.DialOption{
-			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpcOpts := []grpc.DialOption{}
+		fmt.Println(tlsEnabled)
+		if tlsEnabled {
+			grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
 		}
 		conn, err := grpc.Dial(hostAddr, grpcOpts...)
 		if err != nil {
@@ -155,6 +159,7 @@ var Cmd = &cobra.Command{
 func init() {
 	r := rand.New(rand.NewSource(time.Now().Unix())).Int()
 
+	Cmd.Flags().BoolVarP(&tlsEnabled, "tls", "t", false, "enable tls connection")
 	Cmd.Flags().StringVar(&hostAddr, "host", "localhost:8080", "host addr")
 	Cmd.Flags().StringVarP(&msgBoxID, "box", "b", "life is beautiful", "msg box id")
 	Cmd.Flags().StringVarP(&producerID, "producer", "p", fmt.Sprintf("test-producer-%d", r), "producer id")
