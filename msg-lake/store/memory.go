@@ -96,8 +96,7 @@ func (store *MsgStoreMemory) Consume(msgBoxID, consumerID string) (<-chan *proto
 func (store *MsgStoreMemory) Stop(msgBoxID, consumerID string) error {
 	msgBox, exist := store.msgBoxes[msgBoxID]
 	if !exist {
-		msgBox = NewMsgBox()
-		store.msgBoxes[msgBoxID] = msgBox
+		return fmt.Errorf("failed to find msg box for id(%s)", msgBoxID)
 	}
 	return msgBox.RemoveConsumerChan(consumerID)
 }
