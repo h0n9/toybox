@@ -41,6 +41,9 @@ func (ls *LakeServer) Recv(req *proto.RecvReq, stream proto.Lake_RecvServer) err
 		return err
 	}
 
+	// TODO: sync msgs
+
+	// send msgs
 	for {
 		select {
 		case <-stream.Context().Done():
