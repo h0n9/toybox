@@ -3,6 +3,7 @@ package lake
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/h0n9/toybox/msg-lake/proto"
 	"github.com/h0n9/toybox/msg-lake/store"
@@ -41,19 +42,38 @@ func (ls *LakeServer) Recv(req *proto.RecvReq, stream proto.Lake_RecvServer) err
 		return err
 	}
 
-	// TODO: sync msgs
+	// init wait group
+	wg := sync.WaitGroup{}
 
-	// send msgs
-	for {
-		select {
-		case <-stream.Context().Done():
-			return ls.msgStore.Stop(msgBoxID, consumerID)
-		case msg := <-consumerChan:
-			err = stream.Send(&proto.RecvRes{Msg: msg})
-			if err != nil {
-				fmt.Println(err)
-				continue
+	// stream msgs
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-stream.Context().Done():
+				err := ls.msgStore.Stop(msgBoxID, consumerID)
+				if err != nil {
+					fmt.Println(err)
+				}
+				return
+			case msg := <-consumerChan:
+				err = stream.Send(&proto.RecvRes{Msg: msg})
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
 			}
 		}
+	}()
+
+	// sync msgs
+	err = ls.msgStore.Sync(msgBoxID, consumerID)
+	if err != nil {
+		return err
 	}
+
+	wg.Wait()
+
+	return nil
 }
