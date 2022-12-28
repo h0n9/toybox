@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 
 	"github.com/h0n9/toybox/msg-lake/proto"
@@ -69,12 +70,11 @@ var Cmd = &cobra.Command{
 		}()
 
 		// init grpc client
-		grpcOpts := []grpc.DialOption{}
-		fmt.Println(tlsEnabled)
+		creds := grpc.WithTransportCredentials(insecure.NewCredentials())
 		if tlsEnabled {
-			grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
+			creds = grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{}))
 		}
-		conn, err := grpc.Dial(hostAddr, grpcOpts...)
+		conn, err := grpc.Dial(hostAddr, creds)
 		if err != nil {
 			return err
 		}
