@@ -25,10 +25,10 @@ import (
 )
 
 var (
-	tlsEnabled             bool
-	hostAddr               string
-	msgBoxID               string
-	producerID, consumerID string
+	tlsEnabled bool
+	hostAddr   string
+	msgBoxID   string
+	nickname   string
 )
 
 var Cmd = &cobra.Command{
@@ -87,7 +87,7 @@ var Cmd = &cobra.Command{
 
 			stream, err := cli.Recv(ctx, &proto.RecvReq{
 				MsgBoxId:   msgBoxID,
-				ConsumerId: consumerID,
+				ConsumerId: nickname,
 			})
 			if err != nil {
 				fmt.Println(err)
@@ -107,7 +107,7 @@ var Cmd = &cobra.Command{
 				}
 
 				msg := data.GetMsg()
-				if msg.GetFrom().GetAddress() == producerID {
+				if msg.GetFrom().GetAddress() == nickname {
 					continue
 				}
 				fmt.Printf("\r\n📩 <%s> %s\r\n", msg.GetFrom().GetAddress(), msg.GetData().GetData())
@@ -118,7 +118,7 @@ var Cmd = &cobra.Command{
 		go func() {
 			reader := bufio.NewReader(os.Stdin)
 			for {
-				fmt.Printf("\r\n️️💬 <%s> ", producerID)
+				fmt.Printf("\r\n️️💬 <%s> ", nickname)
 				input, err := reader.ReadString('\n')
 				if err != nil {
 					fmt.Println(err)
@@ -132,7 +132,7 @@ var Cmd = &cobra.Command{
 					MsgBoxId: msgBoxID,
 					Msg: &proto.Msg{
 						From: &proto.Address{
-							Address: producerID,
+							Address: nickname,
 						},
 						Data: &proto.Data{
 							Data: []byte(input),
@@ -162,6 +162,5 @@ func init() {
 	Cmd.Flags().BoolVarP(&tlsEnabled, "tls", "t", false, "enable tls connection")
 	Cmd.Flags().StringVar(&hostAddr, "host", "localhost:8080", "host addr")
 	Cmd.Flags().StringVarP(&msgBoxID, "box", "b", "life is beautiful", "msg box id")
-	Cmd.Flags().StringVarP(&producerID, "producer", "p", fmt.Sprintf("test-producer-%d", r), "producer id")
-	Cmd.Flags().StringVarP(&consumerID, "consumer", "c", fmt.Sprintf("test-consumer-%d", r), "consumer id")
+	Cmd.Flags().StringVarP(&nickname, "nickname", "n", fmt.Sprintf("alien-%d", r), "consumer id")
 }
