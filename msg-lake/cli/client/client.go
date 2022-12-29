@@ -110,7 +110,8 @@ var Cmd = &cobra.Command{
 				if msg.GetFrom().GetAddress() == nickname {
 					continue
 				}
-				fmt.Printf("\r\n📩 <%s> %s\r\n", msg.GetFrom().GetAddress(), msg.GetData().GetData())
+				printOutput(true, msg)
+				printInput(true)
 			}
 		}()
 
@@ -118,7 +119,7 @@ var Cmd = &cobra.Command{
 		go func() {
 			reader := bufio.NewReader(os.Stdin)
 			for {
-				fmt.Printf("\r\n️️💬 <%s> ", nickname)
+				printInput(false)
 				input, err := reader.ReadString('\n')
 				if err != nil {
 					fmt.Println(err)
@@ -154,6 +155,22 @@ var Cmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func printInput(newline bool) {
+	s := "💬 <%s> "
+	if newline {
+		s = "\r\n" + s
+	}
+	fmt.Printf(s, nickname)
+}
+
+func printOutput(newline bool, msg *proto.Msg) {
+	s := "📩 <%s> %s"
+	if newline {
+		s = "\r\n" + s
+	}
+	fmt.Printf(s, msg.GetFrom().GetAddress(), msg.GetData().GetData())
 }
 
 func init() {
