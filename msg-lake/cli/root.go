@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/h0n9/toybox/msg-lake/cli/client"
+	"github.com/h0n9/toybox/msg-lake/cli/lab"
 	"github.com/h0n9/toybox/msg-lake/cli/server"
 )
 
@@ -17,5 +18,6 @@ func init() {
 	RootCmd.AddCommand(
 		server.Cmd,
 		client.Cmd,
+		lab.Cmd,
 	)
 }
