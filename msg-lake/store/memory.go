@@ -106,7 +106,7 @@ func (store *MsgStoreMemory) Sync(msgBoxID, consumerID string) error {
 	if err != nil {
 		return err
 	}
-	value, _ := msgBox.consumerOffsets.LoadOrStore(consumerID, 0)
+	value, _ := msgBox.consumerOffsets.LoadOrStore(consumerID, -1)
 	consumerOffset := value.(int) + 1 // next offset
 	len := msgBox.Len()
 	for ; consumerOffset < len; consumerOffset++ {
