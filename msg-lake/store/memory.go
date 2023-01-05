@@ -9,14 +9,14 @@ import (
 
 type MsgBox struct {
 	msgs            []*proto.Msg
-	consumerChans   map[string]chan *proto.Msg // <consumer_id>:<consumer_chan>
-	consumerOffsets *sync.Map                  // <consumer_id>:<consumer_offset>
+	consumerChans   *sync.Map // <consumer_id>:<consumer_chan>
+	consumerOffsets *sync.Map // <consumer_id>:<consumer_offset>
 }
 
 func NewMsgBox() *MsgBox {
 	return &MsgBox{
 		msgs:            make([]*proto.Msg, 0),
-		consumerChans:   make(map[string]chan *proto.Msg, 0),
+		consumerChans:   &sync.Map{},
 		consumerOffsets: &sync.Map{},
 	}
 }
@@ -31,31 +31,30 @@ func (box *MsgBox) Len() int {
 }
 
 func (box *MsgBox) CreateConsumerChan(consumerID string) (chan *proto.Msg, error) {
-	_, exist := box.consumerChans[consumerID]
+	_, exist := box.consumerChans.Load(consumerID)
 	if exist {
 		return nil, fmt.Errorf("found existing consumer chan for consumer id(%s)", consumerID)
 	}
 	consumerChan := make(chan *proto.Msg)
-	box.consumerChans[consumerID] = consumerChan
+	box.consumerChans.Store(consumerID, consumerChan)
 	return consumerChan, nil
 }
 
 func (box *MsgBox) RemoveConsumerChan(consumerID string) error {
-	consumerChan, exist := box.consumerChans[consumerID]
+	value, exist := box.consumerChans.LoadAndDelete(consumerID)
 	if !exist {
 		return nil
 	}
-	delete(box.consumerChans, consumerID)
-	close(consumerChan)
+	close(value.(chan *proto.Msg))
 	return nil
 }
 
 func (box *MsgBox) GetConsumerChan(consumerID string) (chan *proto.Msg, error) {
-	consumerChan, exist := box.consumerChans[consumerID]
+	value, exist := box.consumerChans.Load(consumerID)
 	if !exist {
 		return nil, fmt.Errorf("failed to find consumer chan for consumer id(%s)", consumerID)
 	}
-	return consumerChan, nil
+	return value.(chan *proto.Msg), nil
 }
 
 type MsgStoreMemory struct {
@@ -78,12 +77,13 @@ func (store *MsgStoreMemory) Produce(msgBoxID string, msg *proto.Msg) error {
 	// 1. store msg
 	offset := msgBox.Append(msg)
 
-	for consumerID, consumerChan := range msgBox.consumerChans {
+	msgBox.consumerChans.Range(func(key, value any) bool {
 		// 2. distribute msgs to consumers
-		consumerChan <- msg
+		value.(chan *proto.Msg) <- msg
 		// 3. update consumer offset
-		msgBox.consumerOffsets.Store(consumerID, offset)
-	}
+		msgBox.consumerOffsets.Store(key.(string), offset)
+		return true
+	})
 
 	return nil
 }
