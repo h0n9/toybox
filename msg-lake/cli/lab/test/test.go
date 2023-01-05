@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -12,7 +13,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -43,7 +43,7 @@ var Cmd = &cobra.Command{
 	Short: "run load test",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var (
-			conn *grpc.ClientConn
+			conns []*grpc.ClientConn
 		)
 
 		// init ctx, creds, wg
@@ -67,10 +67,12 @@ var Cmd = &cobra.Command{
 			sig := <-sigCh
 			fmt.Println("\r\ngot", sig.String())
 
-			if conn != nil {
-				fmt.Printf("closing grpc client ... ")
-				conn.Close()
-				fmt.Printf("done\n")
+			if len(conns) > 0 {
+				for _, conn := range conns {
+					fmt.Printf("closing grpc client ... ")
+					conn.Close()
+					fmt.Printf("done\n")
+				}
 			}
 
 			fmt.Printf("cancelling ctx ... ")
@@ -78,6 +80,7 @@ var Cmd = &cobra.Command{
 			fmt.Printf("done\n")
 
 		}()
+
 		// seed random
 		rand.Seed(time.Now().UnixNano())
 
@@ -86,13 +89,14 @@ var Cmd = &cobra.Command{
 			for j := 0; j < numOfUsers; j++ {
 				// generate random consumer id
 				nickname := fmt.Sprintf("alien-%d", rand.Int())
-				fmt.Println(nickname)
+
 				// init grpc client
 				conn, err := grpc.Dial(hostAddr, creds)
 				if err != nil {
 					fmt.Println(err)
 					continue
 				}
+				conns = append(conns, conn)
 				cli := proto.NewLakeClient(conn)
 
 				// execute goroutine (receiver)
@@ -132,31 +136,38 @@ var Cmd = &cobra.Command{
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
+					ticker := time.NewTicker(1 * time.Second)
+					defer ticker.Stop()
 					for {
-						data := []byte(fmt.Sprintf("helloworld-%d", time.Now().UnixNano()))
-						res, err := cli.Send(ctx, &proto.SendReq{
-							MsgBoxId: topic,
-							Msg: &proto.Msg{
-								From: &proto.Address{
-									Address: nickname,
-								},
-								Data: &proto.Data{
-									Data: data,
-								},
-							},
-						})
-						if err != nil {
-							fmt.Println(err)
+						select {
+						case <-ctx.Done():
 							return
-						}
-						if !res.Ok {
-							fmt.Println("failed to send msg")
+						case <-ticker.C:
+							data := []byte(fmt.Sprintf("helloworld-%d", time.Now().UnixNano()))
+							res, err := cli.Send(ctx, &proto.SendReq{
+								MsgBoxId: topic,
+								Msg: &proto.Msg{
+									From: &proto.Address{
+										Address: nickname,
+									},
+									Data: &proto.Data{
+										Data: data,
+									},
+								},
+							})
+							if err != nil {
+								fmt.Println(err)
+								return
+							}
+							if !res.Ok {
+								fmt.Println("failed to send msg")
+							}
 						}
 					}
 				}()
-
 				time.Sleep(100 * time.Millisecond)
 			}
+			time.Sleep(100 * time.Millisecond)
 		}
 		wg.Wait()
 		return nil
