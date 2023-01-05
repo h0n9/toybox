@@ -67,18 +67,15 @@ var Cmd = &cobra.Command{
 			sig := <-sigCh
 			fmt.Println("\r\ngot", sig.String())
 
-			if len(conns) > 0 {
-				for _, conn := range conns {
-					fmt.Printf("closing grpc client ... ")
-					conn.Close()
-					fmt.Printf("done\n")
-				}
-			}
-
 			fmt.Printf("cancelling ctx ... ")
 			cancel()
 			fmt.Printf("done\n")
 
+			for _, conn := range conns {
+				fmt.Printf("closing grpc client ... ")
+				conn.Close()
+				fmt.Printf("done\n")
+			}
 		}()
 
 		// seed random
@@ -115,19 +112,18 @@ var Cmd = &cobra.Command{
 						data, err := stream.Recv()
 						if err == io.EOF || status.Code(err) == codes.Canceled {
 							fmt.Println("stop receiving msgs")
-							break
+							return
 						}
 						if err != nil {
 							fmt.Println(err)
 							sigCh <- syscall.SIGINT
-							break
+							return
 						}
 
 						msg := data.GetMsg()
 						if msg.GetFrom().GetAddress() == nickname {
 							continue
 						}
-
 						fmt.Printf("[%s]%s:%s\n", topic, msg.GetFrom().GetAddress(), msg.GetData().GetData())
 					}
 				}()
@@ -165,9 +161,7 @@ var Cmd = &cobra.Command{
 						}
 					}
 				}()
-				time.Sleep(100 * time.Millisecond)
 			}
-			time.Sleep(100 * time.Millisecond)
 		}
 		wg.Wait()
 		return nil
