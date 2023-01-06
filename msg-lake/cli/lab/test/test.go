@@ -44,6 +44,7 @@ var Cmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var (
 			conns []*grpc.ClientConn
+			loop  = true
 		)
 
 		// init ctx, creds, wg
@@ -67,6 +68,8 @@ var Cmd = &cobra.Command{
 			sig := <-sigCh
 			fmt.Println("\r\ngot", sig.String())
 
+			loop = false
+
 			fmt.Printf("cancelling ctx ... ")
 			cancel()
 			fmt.Printf("done\n")
@@ -81,9 +84,9 @@ var Cmd = &cobra.Command{
 		// seed random
 		rand.Seed(time.Now().UnixNano())
 
-		for i := 0; i < numOfTopics; i++ {
+		for i := 0; i < numOfTopics && loop; i++ {
 			topic := GenerateRandomString(topicLength)
-			for j := 0; j < numOfUsers; j++ {
+			for j := 0; j < numOfUsers && loop; j++ {
 				// generate random consumer id
 				nickname := fmt.Sprintf("alien-%d", rand.Int())
 
@@ -123,7 +126,7 @@ var Cmd = &cobra.Command{
 						if msg.GetFrom().GetAddress() == nickname {
 							continue
 						}
-						fmt.Printf("[%s]%s:%s\n", topic, msg.GetFrom().GetAddress(), msg.GetData().GetData())
+						//fmt.Printf("[%s]%s:%s\n", topic, msg.GetFrom().GetAddress(), msg.GetData().GetData())
 					}
 				}()
 
@@ -160,6 +163,7 @@ var Cmd = &cobra.Command{
 						}
 					}
 				}()
+				time.Sleep(1 * time.Millisecond)
 			}
 		}
 		fmt.Printf("successfully initiated clients: %d\n", numOfTopics*numOfUsers)
