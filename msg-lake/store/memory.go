@@ -58,21 +58,18 @@ func (box *MsgBox) GetConsumerChan(consumerID string) (chan *proto.Msg, error) {
 }
 
 type MsgStoreMemory struct {
-	msgBoxes map[string]*MsgBox // <msg_box_id>:<msg_box>
+	msgBoxes *sync.Map // <msg_box_id>:<msg_box>
 }
 
 func NewMsgStoreMemory() *MsgStoreMemory {
 	return &MsgStoreMemory{
-		msgBoxes: make(map[string]*MsgBox),
+		msgBoxes: &sync.Map{},
 	}
 }
 
 func (store *MsgStoreMemory) Produce(msgBoxID string, msg *proto.Msg) error {
-	msgBox, exist := store.msgBoxes[msgBoxID]
-	if !exist {
-		msgBox = NewMsgBox()
-		store.msgBoxes[msgBoxID] = msgBox
-	}
+	value, _ := store.msgBoxes.LoadOrStore(msgBoxID, NewMsgBox())
+	msgBox := value.(*MsgBox)
 
 	// 1. store msg
 	offset := msgBox.Append(msg)
@@ -89,24 +86,22 @@ func (store *MsgStoreMemory) Produce(msgBoxID string, msg *proto.Msg) error {
 }
 
 func (store *MsgStoreMemory) Consume(msgBoxID, consumerID string) (<-chan *proto.Msg, error) {
-	msgBox, exist := store.msgBoxes[msgBoxID]
-	if !exist {
-		msgBox = NewMsgBox()
-		store.msgBoxes[msgBoxID] = msgBox
-	}
+	value, _ := store.msgBoxes.LoadOrStore(msgBoxID, NewMsgBox())
+	msgBox := value.(*MsgBox)
 	return msgBox.CreateConsumerChan(consumerID)
 }
 
 func (store *MsgStoreMemory) Sync(msgBoxID, consumerID string) error {
-	msgBox, exist := store.msgBoxes[msgBoxID]
+	value, exist := store.msgBoxes.Load(msgBoxID)
 	if !exist {
 		return fmt.Errorf("failed to find msg box for id(%s)", msgBoxID)
 	}
+	msgBox := value.(*MsgBox)
 	consumerChan, err := msgBox.GetConsumerChan(consumerID)
 	if err != nil {
 		return err
 	}
-	value, _ := msgBox.consumerOffsets.LoadOrStore(consumerID, -1)
+	value, _ = msgBox.consumerOffsets.LoadOrStore(consumerID, -1)
 	consumerOffset := value.(int) + 1 // next offset
 	len := msgBox.Len()
 	for ; consumerOffset < len; consumerOffset++ {
@@ -117,9 +112,10 @@ func (store *MsgStoreMemory) Sync(msgBoxID, consumerID string) error {
 }
 
 func (store *MsgStoreMemory) Stop(msgBoxID, consumerID string) error {
-	msgBox, exist := store.msgBoxes[msgBoxID]
+	value, exist := store.msgBoxes.Load(msgBoxID)
 	if !exist {
 		return fmt.Errorf("failed to find msg box for id(%s)", msgBoxID)
 	}
+	msgBox := value.(*MsgBox)
 	return msgBox.RemoveConsumerChan(consumerID)
 }
