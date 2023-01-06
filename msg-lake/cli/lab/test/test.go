@@ -116,7 +116,6 @@ var Cmd = &cobra.Command{
 						}
 						if err != nil {
 							fmt.Println(err)
-							sigCh <- syscall.SIGINT
 							return
 						}
 
@@ -163,6 +162,7 @@ var Cmd = &cobra.Command{
 				}()
 			}
 		}
+		fmt.Printf("successfully initiated clients: %d\n", numOfTopics*numOfUsers)
 		wg.Wait()
 		return nil
 	},
