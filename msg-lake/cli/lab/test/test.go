@@ -84,21 +84,21 @@ var Cmd = &cobra.Command{
 		// seed random
 		rand.Seed(time.Now().UnixNano())
 
-		for i := 0; i < numOfTopics && loop; i++ {
-			topic := GenerateRandomString(topicLength)
-			for j := 0; j < numOfUsers && loop; j++ {
-				// generate random consumer id
-				nickname := fmt.Sprintf("alien-%d", rand.Int())
+		for i := 0; i < numOfUsers && loop; i++ {
+			// generate random consumer id
+			nickname := fmt.Sprintf("alien-%d", rand.Int())
 
-				// init grpc client
-				conn, err := grpc.Dial(hostAddr, creds)
-				if err != nil {
-					fmt.Println(err)
-					continue
-				}
-				conns = append(conns, conn)
-				cli := proto.NewLakeClient(conn)
+			// init grpc client
+			conn, err := grpc.Dial(hostAddr, creds)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			conns = append(conns, conn)
+			cli := proto.NewLakeClient(conn)
 
+			for j := 0; j < numOfTopics && loop; j++ {
+				topic := GenerateRandomString(topicLength)
 				// execute goroutine (receiver)
 				wg.Add(1)
 				go func() {
@@ -163,8 +163,8 @@ var Cmd = &cobra.Command{
 						}
 					}
 				}()
-				time.Sleep(1 * time.Millisecond)
 			}
+			time.Sleep(1 * time.Millisecond)
 		}
 		fmt.Printf("successfully initiated clients: %d\n", numOfTopics*numOfUsers)
 		wg.Wait()
