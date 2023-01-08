@@ -3,31 +3,43 @@ package store
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/h0n9/toybox/msg-lake/proto"
 )
 
 type MsgBox struct {
-	msgs            []*proto.Msg
+	frontOffset     uint64
+	backOffset      uint64
+	msgs            *sync.Map // <offset>:<msg>
 	consumerChans   *sync.Map // <consumer_id>:<consumer_chan>
 	consumerOffsets *sync.Map // <consumer_id>:<consumer_offset>
 }
 
 func NewMsgBox() *MsgBox {
 	return &MsgBox{
-		msgs:            make([]*proto.Msg, 0),
+		frontOffset:     0,
+		backOffset:      0,
+		msgs:            &sync.Map{},
 		consumerChans:   &sync.Map{},
 		consumerOffsets: &sync.Map{},
 	}
 }
 
-func (box *MsgBox) Append(msg *proto.Msg) int {
-	box.msgs = append(box.msgs, msg)
-	return len(box.msgs) - 1
+func (box *MsgBox) Append(msg *proto.Msg) uint64 {
+	offset := atomic.LoadUint64(&box.backOffset)
+	box.msgs.Store(offset, msg)
+	atomic.AddUint64(&box.backOffset, 1)
+	return offset
 }
 
-func (box *MsgBox) Len() int {
-	return len(box.msgs)
+func (box *MsgBox) Len() uint64 {
+	frontOffset := atomic.LoadUint64(&box.frontOffset)
+	backOffset := atomic.LoadUint64(&box.backOffset)
+	if frontOffset == backOffset {
+		return 0
+	}
+	return backOffset - frontOffset + 1
 }
 
 func (box *MsgBox) CreateConsumerChan(consumerID string) (chan *proto.Msg, error) {
@@ -101,11 +113,19 @@ func (store *MsgStoreMemory) Sync(msgBoxID, consumerID string) error {
 	if err != nil {
 		return err
 	}
-	value, _ = msgBox.consumerOffsets.LoadOrStore(consumerID, -1)
-	consumerOffset := value.(int) + 1 // next offset
-	len := msgBox.Len()
-	for ; consumerOffset < len; consumerOffset++ {
-		consumerChan <- msgBox.msgs[consumerOffset]
+	frontOffset := atomic.LoadUint64(&msgBox.frontOffset)
+	backOffset := atomic.LoadUint64(&msgBox.backOffset)
+	value, _ = msgBox.consumerOffsets.LoadOrStore(consumerID, frontOffset)
+	consumerOffset := value.(uint64)
+	if consumerOffset != 0 {
+		consumerOffset += 1
+	}
+	for ; consumerOffset <= backOffset; consumerOffset++ {
+		value, exist := msgBox.msgs.Load(consumerOffset)
+		if !exist {
+			continue
+		}
+		consumerChan <- value.(*proto.Msg)
 		msgBox.consumerOffsets.Store(consumerID, consumerOffset)
 	}
 	return nil
