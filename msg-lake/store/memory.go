@@ -87,10 +87,13 @@ func (store *MsgStoreMemory) Produce(msgBoxID string, msg *proto.Msg) error {
 	offset := msgBox.Append(msg)
 
 	msgBox.consumerChans.Range(func(key, value any) bool {
+		select {
 		// 2. distribute msgs to consumers
-		value.(chan *proto.Msg) <- msg
-		// 3. update consumer offset
-		msgBox.consumerOffsets.Store(key.(string), offset)
+		case value.(chan *proto.Msg) <- msg:
+			// 3. update consumer offset
+			msgBox.consumerOffsets.Store(key.(string), offset)
+		default:
+		}
 		return true
 	})
 
@@ -125,8 +128,11 @@ func (store *MsgStoreMemory) Sync(msgBoxID, consumerID string) error {
 		if !exist {
 			continue
 		}
-		consumerChan <- value.(*proto.Msg)
-		msgBox.consumerOffsets.Store(consumerID, consumerOffset)
+		select {
+		case consumerChan <- value.(*proto.Msg):
+			msgBox.consumerOffsets.Store(consumerID, consumerOffset)
+		default:
+		}
 	}
 	return nil
 }
