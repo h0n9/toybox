@@ -112,21 +112,26 @@ var Cmd = &cobra.Command{
 						return
 					}
 					for {
-						data, err := stream.Recv()
-						if err == io.EOF || status.Code(err) == codes.Canceled {
-							fmt.Println("stop receiving msgs")
+						select {
+						case <-ctx.Done():
 							return
-						}
-						if err != nil {
-							fmt.Println(err)
-							return
-						}
+						default:
+							data, err := stream.Recv()
+							if err == io.EOF || status.Code(err) == codes.Canceled {
+								fmt.Println("stop receiving msgs")
+								return
+							}
+							if err != nil {
+								fmt.Println(err)
+								return
+							}
 
-						msg := data.GetMsg()
-						if msg.GetFrom().GetAddress() == nickname {
-							continue
+							msg := data.GetMsg()
+							if msg.GetFrom().GetAddress() == nickname {
+								continue
+							}
+							//fmt.Printf("[%s]%s:%s\n", topic, msg.GetFrom().GetAddress(), msg.GetData().GetData())
 						}
-						//fmt.Printf("[%s]%s:%s\n", topic, msg.GetFrom().GetAddress(), msg.GetData().GetData())
 					}
 				}()
 
@@ -154,6 +159,10 @@ var Cmd = &cobra.Command{
 								},
 							})
 							if err != nil {
+								if err == io.EOF || status.Code(err) == codes.Canceled {
+									fmt.Println("stop sending msgs")
+									return
+								}
 								fmt.Println(err)
 								return
 							}
