@@ -7,6 +7,8 @@ import (
 
 	"github.com/h0n9/toybox/msg-lake/proto"
 	"github.com/h0n9/toybox/msg-lake/store"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type LakeServer struct {
@@ -60,7 +62,10 @@ func (ls *LakeServer) Recv(req *proto.RecvReq, stream proto.Lake_RecvServer) err
 			case msg := <-consumerChan:
 				err = stream.Send(&proto.RecvRes{Msg: msg})
 				if err != nil {
-					fmt.Println(err)
+					code := status.Code(err)
+					if code != codes.Canceled && code != codes.Unavailable {
+						fmt.Println(err)
+					}
 					continue
 				}
 			}
