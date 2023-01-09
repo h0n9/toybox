@@ -126,7 +126,7 @@ var Cmd = &cobra.Command{
 							return
 						default:
 							data, err := stream.Recv()
-							if err == io.EOF || status.Code(err) == codes.Canceled {
+							if err == io.EOF || status.Code(err) > codes.OK {
 								fmt.Println("stop receiving msgs")
 								return
 							}
@@ -134,7 +134,6 @@ var Cmd = &cobra.Command{
 								fmt.Println(err)
 								return
 							}
-
 							msg := data.GetMsg()
 							if msg.GetFrom().GetAddress() == nickname {
 								continue
@@ -168,7 +167,7 @@ var Cmd = &cobra.Command{
 								},
 							})
 							if err != nil {
-								if err == io.EOF || status.Code(err) == codes.Canceled {
+								if err == io.EOF || status.Code(err) > codes.OK {
 									fmt.Println("stop sending msgs")
 									return
 								}
