@@ -23,19 +23,21 @@ import (
 )
 
 const (
-	DefaultTlsEnabled  = false
-	DefaultHostAddr    = "localhost:8080"
-	DefaultNumOfTopics = 10
-	DefaultNumOfUsers  = 100
-	DefaultTopicLength = 10
+	DefaultTlsEnabled    = false
+	DefaultHostAddr      = "localhost:8080"
+	DefaultNumOfTopics   = 10
+	DefaultNumOfUsers    = 100
+	DefaultTopicLength   = 10
+	DefaultRandomEnabled = false
 )
 
 var (
-	tlsEnabled  bool
-	hostAddr    string
-	numOfTopics int
-	numOfUsers  int
-	topicLength int
+	tlsEnabled    bool
+	hostAddr      string
+	numOfTopics   int
+	numOfUsers    int
+	topicLength   int
+	randomEnabled bool
 )
 
 var Cmd = &cobra.Command{
@@ -85,8 +87,11 @@ var Cmd = &cobra.Command{
 		rand.Seed(time.Now().UnixNano())
 
 		for i := 0; i < numOfUsers && loop; i++ {
-			// generate random consumer id
-			nickname := fmt.Sprintf("alien-%d", rand.Int())
+			userIndex := i
+			if randomEnabled {
+				userIndex = rand.Int()
+			}
+			nickname := fmt.Sprintf("alien-%d", userIndex)
 
 			// init grpc client
 			conn, err := grpc.Dial(hostAddr, creds)
@@ -98,7 +103,11 @@ var Cmd = &cobra.Command{
 			cli := proto.NewLakeClient(conn)
 
 			for j := 0; j < numOfTopics && loop; j++ {
-				topic := GenerateRandomString(topicLength)
+				topicIndex := j
+				if randomEnabled {
+					topicIndex = rand.Int()
+				}
+				topic := fmt.Sprintf("topic-%d", topicIndex)
 				// execute goroutine (receiver)
 				wg.Add(1)
 				go func() {
@@ -187,6 +196,7 @@ func init() {
 	Cmd.Flags().IntVarP(&numOfTopics, "topics", "n", DefaultNumOfTopics, "number of topics")
 	Cmd.Flags().IntVarP(&numOfUsers, "users", "u", DefaultNumOfUsers, "number of users")
 	Cmd.Flags().IntVarP(&topicLength, "length", "l", DefaultTopicLength, "topic length")
+	Cmd.Flags().BoolVarP(&randomEnabled, "random", "r", DefaultRandomEnabled, "enable random topic, nickname")
 }
 
 func GenerateRandomString(length int) string {
