@@ -5,8 +5,8 @@ import (
 )
 
 type MsgStore interface {
-	Produce(msgBoxID string, msg *proto.Msg) error
-	Consume(msgBoxID, consumerID string) (<-chan *proto.Msg, error)
+	Produce(msgBoxID string, msgCapsule *proto.MsgCapsule) error
+	Consume(msgBoxID, consumerID string) (<-chan *proto.MsgCapsule, error)
 	Sync(msgBoxID, consumerID string) error
 	Stop(msgBoxID, consumerID string) error
 }

@@ -11,7 +11,7 @@ import (
 type MsgBox struct {
 	frontOffset     uint64
 	backOffset      uint64
-	msgs            *sync.Map // <offset>:<msg>
+	msgCapsules     *sync.Map // <offset>:<msg>
 	consumerChans   *sync.Map // <consumer_id>:<consumer_chan>
 	consumerOffsets *sync.Map // <consumer_id>:<consumer_offset>
 }
@@ -20,15 +20,15 @@ func NewMsgBox() *MsgBox {
 	return &MsgBox{
 		frontOffset:     0,
 		backOffset:      0,
-		msgs:            &sync.Map{},
+		msgCapsules:     &sync.Map{},
 		consumerChans:   &sync.Map{},
 		consumerOffsets: &sync.Map{},
 	}
 }
 
-func (box *MsgBox) Append(msg *proto.Msg) uint64 {
+func (box *MsgBox) Append(msgCapsule *proto.MsgCapsule) uint64 {
 	offset := atomic.LoadUint64(&box.backOffset)
-	box.msgs.Store(offset, msg)
+	box.msgCapsules.Store(offset, msgCapsule)
 	atomic.AddUint64(&box.backOffset, 1)
 	return offset
 }
@@ -42,12 +42,12 @@ func (box *MsgBox) Len() uint64 {
 	return backOffset - frontOffset + 1
 }
 
-func (box *MsgBox) CreateConsumerChan(consumerID string) (chan *proto.Msg, error) {
+func (box *MsgBox) CreateConsumerChan(consumerID string) (chan *proto.MsgCapsule, error) {
 	_, exist := box.consumerChans.Load(consumerID)
 	if exist {
 		return nil, fmt.Errorf("found existing consumer chan for consumer id(%s)", consumerID)
 	}
-	consumerChan := make(chan *proto.Msg)
+	consumerChan := make(chan *proto.MsgCapsule)
 	box.consumerChans.Store(consumerID, consumerChan)
 	return consumerChan, nil
 }
@@ -57,16 +57,16 @@ func (box *MsgBox) RemoveConsumerChan(consumerID string) error {
 	if !exist {
 		return nil
 	}
-	close(value.(chan *proto.Msg))
+	close(value.(chan *proto.MsgCapsule))
 	return nil
 }
 
-func (box *MsgBox) GetConsumerChan(consumerID string) (chan *proto.Msg, error) {
+func (box *MsgBox) GetConsumerChan(consumerID string) (chan *proto.MsgCapsule, error) {
 	value, exist := box.consumerChans.Load(consumerID)
 	if !exist {
 		return nil, fmt.Errorf("failed to find consumer chan for consumer id(%s)", consumerID)
 	}
-	return value.(chan *proto.Msg), nil
+	return value.(chan *proto.MsgCapsule), nil
 }
 
 type MsgStoreMemory struct {
@@ -79,17 +79,17 @@ func NewMsgStoreMemory() *MsgStoreMemory {
 	}
 }
 
-func (store *MsgStoreMemory) Produce(msgBoxID string, msg *proto.Msg) error {
+func (store *MsgStoreMemory) Produce(msgBoxID string, msgCapsule *proto.MsgCapsule) error {
 	value, _ := store.msgBoxes.LoadOrStore(msgBoxID, NewMsgBox())
 	msgBox := value.(*MsgBox)
 
 	// 1. store msg
-	offset := msgBox.Append(msg)
+	offset := msgBox.Append(msgCapsule)
 
 	msgBox.consumerChans.Range(func(key, value any) bool {
 		select {
 		// 2. distribute msgs to consumers
-		case value.(chan *proto.Msg) <- msg:
+		case value.(chan *proto.MsgCapsule) <- msgCapsule:
 			// 3. update consumer offset
 			msgBox.consumerOffsets.Store(key.(string), offset)
 		default:
@@ -100,7 +100,7 @@ func (store *MsgStoreMemory) Produce(msgBoxID string, msg *proto.Msg) error {
 	return nil
 }
 
-func (store *MsgStoreMemory) Consume(msgBoxID, consumerID string) (<-chan *proto.Msg, error) {
+func (store *MsgStoreMemory) Consume(msgBoxID, consumerID string) (<-chan *proto.MsgCapsule, error) {
 	value, _ := store.msgBoxes.LoadOrStore(msgBoxID, NewMsgBox())
 	msgBox := value.(*MsgBox)
 	return msgBox.CreateConsumerChan(consumerID)
@@ -124,12 +124,12 @@ func (store *MsgStoreMemory) Sync(msgBoxID, consumerID string) error {
 		consumerOffset += 1
 	}
 	for ; consumerOffset <= backOffset; consumerOffset++ {
-		value, exist := msgBox.msgs.Load(consumerOffset)
+		value, exist := msgBox.msgCapsules.Load(consumerOffset)
 		if !exist {
 			continue
 		}
 		select {
-		case consumerChan <- value.(*proto.Msg):
+		case consumerChan <- value.(*proto.MsgCapsule):
 			msgBox.consumerOffsets.Store(consumerID, consumerOffset)
 		default:
 		}
