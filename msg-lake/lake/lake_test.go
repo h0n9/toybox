@@ -27,8 +27,7 @@ func TestLake(t *testing.T) {
 	sampleMsgs := []*pb.Msg{}
 	for i := 0; i < 1000; i++ {
 		sampleMsgs = append(sampleMsgs, &pb.Msg{
-			From: &pb.Address{Address: "addr-" + strconv.Itoa(rand.Int())},
-			Data: &pb.Data{Data: []byte(strconv.Itoa(rand.Int()))},
+			Data: []byte(strconv.Itoa(rand.Int())),
 		})
 	}
 
@@ -69,7 +68,9 @@ func TestLake(t *testing.T) {
 				ctx,
 				&pb.SendReq{
 					MsgBoxId: "test",
-					Msg:      sampleMsg,
+					MsgCapsule: &pb.MsgCapsule{
+						Msg: sampleMsg,
+					},
 				},
 			)
 			assert.NoError(t, err)

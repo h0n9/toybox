@@ -28,7 +28,7 @@ func (ls *LakeServer) Close() {
 }
 
 func (ls *LakeServer) Send(ctx context.Context, req *proto.SendReq) (*proto.SendRes, error) {
-	err := ls.msgStore.Produce(req.GetMsgBoxId(), req.GetMsg())
+	err := ls.msgStore.Produce(req.GetMsgBoxId(), req.GetMsgCapsule())
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (ls *LakeServer) Recv(req *proto.RecvReq, stream proto.Lake_RecvServer) err
 	// init wait group
 	wg := sync.WaitGroup{}
 
-	// stream msgs
+	// stream msgCapsules
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -59,8 +59,8 @@ func (ls *LakeServer) Recv(req *proto.RecvReq, stream proto.Lake_RecvServer) err
 					fmt.Println(err)
 				}
 				return
-			case msg := <-consumerChan:
-				err = stream.Send(&proto.RecvRes{Msg: msg})
+			case msgCapsule := <-consumerChan:
+				err = stream.Send(&proto.RecvRes{MsgCapsule: msgCapsule})
 				if err != nil {
 					code := status.Code(err)
 					if code != codes.Canceled && code != codes.Unavailable {
@@ -72,7 +72,7 @@ func (ls *LakeServer) Recv(req *proto.RecvReq, stream proto.Lake_RecvServer) err
 		}
 	}()
 
-	// sync msgs
+	// sync msgCapsules
 	err = ls.msgStore.Sync(msgBoxID, consumerID)
 	if err != nil {
 		return err
