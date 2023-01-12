@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/h0n9/toybox/msg-lake/proto"
-	"github.com/h0n9/toybox/msg-lake/store"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	pb "github.com/h0n9/toybox/msg-lake/proto"
+	"github.com/h0n9/toybox/msg-lake/store"
 )
 
 type LakeServer struct {
-	proto.UnimplementedLakeServer
+	pb.UnimplementedLakeServer
 
 	msgStore store.MsgStore
 }
@@ -27,15 +28,15 @@ func (ls *LakeServer) Close() {
 	// TODO: implement Close() method
 }
 
-func (ls *LakeServer) Send(ctx context.Context, req *proto.SendReq) (*proto.SendRes, error) {
+func (ls *LakeServer) Send(ctx context.Context, req *pb.SendReq) (*pb.SendRes, error) {
 	err := ls.msgStore.Produce(req.GetMsgBoxId(), req.GetMsgCapsule())
 	if err != nil {
 		return nil, err
 	}
-	return &proto.SendRes{Ok: true}, nil
+	return &pb.SendRes{Ok: true}, nil
 }
 
-func (ls *LakeServer) Recv(req *proto.RecvReq, stream proto.Lake_RecvServer) error {
+func (ls *LakeServer) Recv(req *pb.RecvReq, stream pb.Lake_RecvServer) error {
 	msgBoxID := req.GetMsgBoxId()
 	consumerID := req.GetConsumerId()
 
@@ -60,7 +61,7 @@ func (ls *LakeServer) Recv(req *proto.RecvReq, stream proto.Lake_RecvServer) err
 				}
 				return
 			case msgCapsule := <-consumerChan:
-				err = stream.Send(&proto.RecvRes{MsgCapsule: msgCapsule})
+				err = stream.Send(&pb.RecvRes{MsgCapsule: msgCapsule})
 				if err != nil {
 					code := status.Code(err)
 					if code != codes.Canceled && code != codes.Unavailable {
