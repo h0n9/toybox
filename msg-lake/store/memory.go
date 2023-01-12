@@ -120,7 +120,7 @@ func (store *MsgStoreMemory) Sync(msgBoxID, consumerID string) error {
 	if consumerOffset != 0 {
 		consumerOffset += 1
 	}
-	for ; consumerOffset <= backOffset; consumerOffset++ {
+	for ; consumerOffset < backOffset; consumerOffset++ {
 		value, exist := msgBox.msgCapsules.Load(consumerOffset)
 		if !exist {
 			continue
