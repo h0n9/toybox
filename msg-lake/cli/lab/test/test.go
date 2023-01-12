@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -12,14 +13,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/postie-labs/go-postie-lib/crypto"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 
-	"github.com/h0n9/toybox/msg-lake/proto"
+	pb "github.com/h0n9/toybox/msg-lake/proto"
 )
 
 const (
@@ -92,6 +95,12 @@ var Cmd = &cobra.Command{
 				userIndex = rand.Int()
 			}
 			nickname := fmt.Sprintf("alien-%d", userIndex)
+			privKey, err := crypto.GenPrivKeyFromSeed([]byte(nickname))
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			pubKeyBytes := privKey.PubKey().Bytes()
 
 			// init grpc client
 			conn, err := grpc.Dial(hostAddr, creds)
@@ -100,7 +109,7 @@ var Cmd = &cobra.Command{
 				continue
 			}
 			conns = append(conns, conn)
-			cli := proto.NewLakeClient(conn)
+			cli := pb.NewLakeClient(conn)
 
 			for j := 0; j < numOfTopics && loop; j++ {
 				topicIndex := j
@@ -112,7 +121,7 @@ var Cmd = &cobra.Command{
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					stream, err := cli.Recv(ctx, &proto.RecvReq{
+					stream, err := cli.Recv(ctx, &pb.RecvReq{
 						MsgBoxId:   topic,
 						ConsumerId: nickname,
 					})
@@ -134,11 +143,19 @@ var Cmd = &cobra.Command{
 								fmt.Println(err)
 								return
 							}
-							msg := data.GetMsg()
-							if msg.GetFrom().GetAddress() == nickname {
+							msgCapsule := data.GetMsgCapsule()
+							msg := msgCapsule.GetMsg()
+							signature := msgCapsule.GetSignature()
+							if bytes.Equal(signature.GetPubKey(), pubKeyBytes) {
 								continue
 							}
-							//fmt.Printf("[%s]%s:%s\n", topic, msg.GetFrom().GetAddress(), msg.GetData().GetData())
+							metadata := msg.GetMetadata()
+							nickname := "unknown"
+							value, exist := metadata["nickname"]
+							if exist {
+								nickname = string(value)
+							}
+							fmt.Printf("[%s]%s:%s\n", topic, nickname, msg.GetData())
 						}
 					}
 				}()
@@ -154,15 +171,30 @@ var Cmd = &cobra.Command{
 						case <-ctx.Done():
 							return
 						case <-ticker.C:
-							data := []byte(fmt.Sprintf("helloworld-%d", time.Now().UnixNano()))
-							res, err := cli.Send(ctx, &proto.SendReq{
+							msg := &pb.Msg{
+								Data: []byte(fmt.Sprintf("helloworld-%d", time.Now().UnixNano())),
+								Metadata: map[string][]byte{
+									"nickname": []byte(nickname),
+								},
+							}
+							data, err := proto.Marshal(msg)
+							if err != nil {
+								fmt.Println(err)
+								continue
+							}
+							sigBytes, err := privKey.Sign(data)
+							if err != nil {
+								fmt.Println(err)
+								continue
+							}
+
+							res, err := cli.Send(ctx, &pb.SendReq{
 								MsgBoxId: topic,
-								Msg: &proto.Msg{
-									From: &proto.Address{
-										Address: nickname,
-									},
-									Data: &proto.Data{
-										Data: data,
+								MsgCapsule: &pb.MsgCapsule{
+									Msg: msg,
+									Signature: &pb.Signature{
+										PubKey:   pubKeyBytes,
+										SigBytes: sigBytes,
 									},
 								},
 							})
