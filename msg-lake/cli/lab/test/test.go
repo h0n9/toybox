@@ -144,11 +144,11 @@ var Cmd = &cobra.Command{
 								return
 							}
 							msgCapsule := data.GetMsgCapsule()
-							msg := msgCapsule.GetMsg()
 							signature := msgCapsule.GetSignature()
 							if bytes.Equal(signature.GetPubKey(), pubKeyBytes) {
 								continue
 							}
+							msg := msgCapsule.GetMsg()
 							metadata := msg.GetMetadata()
 							nickname := "unknown"
 							value, exist := metadata["nickname"]

@@ -2,6 +2,7 @@ package client
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -14,14 +15,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/postie-labs/go-postie-lib/crypto"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 
-	"github.com/h0n9/toybox/msg-lake/proto"
+	pb "github.com/h0n9/toybox/msg-lake/proto"
 )
 
 var (
@@ -53,39 +56,42 @@ var Cmd = &cobra.Command{
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-
 			sig := <-sigCh
 			fmt.Println("\r\ngot", sig.String())
-
 			if conn != nil {
 				fmt.Printf("closing grpc client ... ")
 				conn.Close()
 				fmt.Printf("done\n")
 			}
-
 			fmt.Printf("cancelling ctx ... ")
 			cancel()
 			fmt.Printf("done\n")
-
 		}()
+
+		// init privKey
+		privKey, err := crypto.GenPrivKeyFromSeed([]byte(nickname))
+		if err != nil {
+			return err
+		}
+		pubKeyBytes := privKey.PubKey().Bytes()
 
 		// init grpc client
 		creds := grpc.WithTransportCredentials(insecure.NewCredentials())
 		if tlsEnabled {
 			creds = grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{}))
 		}
-		conn, err := grpc.Dial(hostAddr, creds)
+		conn, err = grpc.Dial(hostAddr, creds)
 		if err != nil {
 			return err
 		}
-		cli := proto.NewLakeClient(conn)
+		cli := pb.NewLakeClient(conn)
 
 		// execute goroutine (receiver)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 
-			stream, err := cli.Recv(ctx, &proto.RecvReq{
+			stream, err := cli.Recv(ctx, &pb.RecvReq{
 				MsgBoxId:   msgBoxID,
 				ConsumerId: nickname,
 			})
@@ -106,11 +112,12 @@ var Cmd = &cobra.Command{
 					break
 				}
 
-				msg := data.GetMsg()
-				if msg.GetFrom().GetAddress() == nickname {
+				msgCapsule := data.GetMsgCapsule()
+				signature := msgCapsule.GetSignature()
+				if bytes.Equal(signature.GetPubKey(), pubKeyBytes) {
 					continue
 				}
-				printOutput(true, msg)
+				printOutput(true, msgCapsule.GetMsg())
 				printInput(true)
 			}
 		}()
@@ -129,14 +136,30 @@ var Cmd = &cobra.Command{
 				if input == "" {
 					continue
 				}
-				res, err := cli.Send(ctx, &proto.SendReq{
+				msg := &pb.Msg{
+					Data: []byte(input),
+					Metadata: map[string][]byte{
+						"nickname": []byte(nickname),
+					},
+				}
+				data, err := proto.Marshal(msg)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+				sigBytes, err := privKey.Sign(data)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+
+				res, err := cli.Send(ctx, &pb.SendReq{
 					MsgBoxId: msgBoxID,
-					Msg: &proto.Msg{
-						From: &proto.Address{
-							Address: nickname,
-						},
-						Data: &proto.Data{
-							Data: []byte(input),
+					MsgCapsule: &pb.MsgCapsule{
+						Msg: msg,
+						Signature: &pb.Signature{
+							PubKey:   pubKeyBytes,
+							SigBytes: sigBytes,
 						},
 					},
 				})
@@ -165,12 +188,18 @@ func printInput(newline bool) {
 	fmt.Printf(s, nickname)
 }
 
-func printOutput(newline bool, msg *proto.Msg) {
+func printOutput(newline bool, msg *pb.Msg) {
 	s := "📩 <%s> %s"
 	if newline {
 		s = "\r\n" + s
 	}
-	fmt.Printf(s, msg.GetFrom().GetAddress(), msg.GetData().GetData())
+	nickname := "unknown"
+	metadata := msg.GetMetadata()
+	value, exist := metadata["nickname"]
+	if exist {
+		nickname = string(value)
+	}
+	fmt.Printf(s, nickname, msg.GetData())
 }
 
 func init() {
