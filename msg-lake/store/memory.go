@@ -53,11 +53,7 @@ func (box *MsgBox) CreateConsumerChan(consumerID string) (chan *pb.MsgCapsule, e
 }
 
 func (box *MsgBox) RemoveConsumerChan(consumerID string) error {
-	value, exist := box.consumerChans.LoadAndDelete(consumerID)
-	if !exist {
-		return nil
-	}
-	close(value.(chan *pb.MsgCapsule))
+	box.consumerChans.Delete(consumerID)
 	return nil
 }
 
