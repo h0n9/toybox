@@ -32,6 +32,7 @@ const (
 	DefaultNumOfUsers    = 100
 	DefaultTopicLength   = 10
 	DefaultRandomEnabled = false
+	DefaultDebugEnabled  = false
 )
 
 var (
@@ -41,6 +42,7 @@ var (
 	numOfUsers    int
 	topicLength   int
 	randomEnabled bool
+	debugEnabled  bool
 )
 
 var Cmd = &cobra.Command{
@@ -155,7 +157,9 @@ var Cmd = &cobra.Command{
 							if exist {
 								nickname = string(value)
 							}
-							fmt.Printf("[%s]%s:%s\n", topic, nickname, msg.GetData())
+							if debugEnabled {
+								fmt.Printf("[%s]%s:%s\n", topic, nickname, msg.GetData())
+							}
 						}
 					}
 				}()
@@ -228,6 +232,7 @@ func init() {
 	Cmd.Flags().IntVarP(&numOfUsers, "users", "u", DefaultNumOfUsers, "number of users")
 	Cmd.Flags().IntVarP(&topicLength, "length", "l", DefaultTopicLength, "topic length")
 	Cmd.Flags().BoolVarP(&randomEnabled, "random", "r", DefaultRandomEnabled, "enable random topic, nickname")
+	Cmd.Flags().BoolVarP(&debugEnabled, "debug", "d", DefaultDebugEnabled, "enable debugging msgs")
 }
 
 func GenerateRandomString(length int) string {
