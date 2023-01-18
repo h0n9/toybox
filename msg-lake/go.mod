@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/gdamore/tcell/v2 v2.5.4
-	github.com/postie-labs/go-postie-lib v0.0.2
+	github.com/postie-labs/go-postie-lib v0.0.3
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.1
 	google.golang.org/grpc v1.51.0
