@@ -5,6 +5,9 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/postie-labs/go-postie-lib/crypto"
+	"google.golang.org/protobuf/proto"
+
 	pb "github.com/h0n9/toybox/msg-lake/proto"
 )
 
@@ -19,6 +22,22 @@ func NewMsgStoreMemory() *MsgStoreMemory {
 }
 
 func (store *MsgStoreMemory) Produce(msgBoxID string, msgCapsule *pb.MsgCapsule) error {
+	// 0. verify msg signature
+	msg := msgCapsule.GetMsg()
+	signature := msgCapsule.GetSignature()
+	pubKey, err := crypto.GenPubKeyFromBytes(signature.GetPubKey())
+	if err != nil {
+		return err
+	}
+	msgBytes, err := proto.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	sigBytes := signature.GetSigBytes()
+	if !pubKey.Verify(msgBytes, sigBytes) {
+		return fmt.Errorf("failed to verify msg signature")
+	}
+
 	value, _ := store.msgBoxes.LoadOrStore(msgBoxID, NewMsgBox())
 	msgBox := value.(*MsgBox)
 
