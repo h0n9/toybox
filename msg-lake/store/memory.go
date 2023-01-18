@@ -29,7 +29,7 @@ func NewMsgBox() *MsgBox {
 func (box *MsgBox) Append(msgCapsule *pb.MsgCapsule) uint64 {
 	offset := atomic.LoadUint64(&box.backOffset)
 	box.msgCapsules.Store(offset, msgCapsule)
-	atomic.AddUint64(&box.backOffset, 1)
+	offset = atomic.AddUint64(&box.backOffset, 1)
 	return offset
 }
 
