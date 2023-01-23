@@ -69,7 +69,7 @@ var Cmd = &cobra.Command{
 		}()
 
 		// init msgStore
-		msgStore := store.NewMsgStoreMemory()
+		msgStore := store.NewMsgStoreLight()
 
 		// init grpc, lake servers and register lakeServer to grpcServer
 		grpcServer = grpc.NewServer()
