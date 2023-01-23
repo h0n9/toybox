@@ -73,12 +73,6 @@ func (ls *LakeServer) Recv(req *pb.RecvReq, stream pb.Lake_RecvServer) error {
 		}
 	}()
 
-	// sync msgCapsules
-	err = ls.msgStore.Sync(msgBoxID, consumerID)
-	if err != nil {
-		return err
-	}
-
 	wg.Wait()
 
 	return nil
