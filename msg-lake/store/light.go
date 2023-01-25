@@ -17,14 +17,9 @@ func NewMsgStoreLight() *MsgStoreLight {
 	}
 }
 
-func (store *MsgStoreLight) Produce(msgBoxID string, msgCapsule *pb.MsgCapsule) error {
+func (store *MsgStoreLight) Produce(msgBoxID string) (*sync.Map, error) {
 	value, _ := store.msgBoxes.LoadOrStore(msgBoxID, &sync.Map{})
-	msgBox := value.(*sync.Map)
-	msgBox.Range(func(key, value any) bool {
-		value.(chan *pb.MsgCapsule) <- msgCapsule
-		return true
-	})
-	return nil
+	return value.(*sync.Map), nil
 }
 
 func (store *MsgStoreLight) Consume(msgBoxID, consumerID string) (<-chan *pb.MsgCapsule, error) {

@@ -32,7 +32,7 @@ func TestLake(t *testing.T) {
 	}
 
 	// init msgStore
-	msgStore := store.NewMsgStoreMemory()
+	msgStore := store.NewMsgStoreLight()
 
 	// init server
 	grpcServer := grpc.NewServer()

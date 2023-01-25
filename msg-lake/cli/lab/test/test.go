@@ -212,11 +212,12 @@ var Cmd = &cobra.Command{
 								res, err := sendClient.CloseAndRecv()
 								if err != nil {
 									fmt.Println(err)
+									return
 								}
 								if !res.Ok {
 									fmt.Println("failed to send msg")
+									return
 								}
-								return
 							}
 							if err != nil {
 								fmt.Println(err)

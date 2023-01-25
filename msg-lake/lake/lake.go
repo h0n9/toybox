@@ -29,6 +29,10 @@ func (ls *LakeServer) Close() {
 }
 
 func (ls *LakeServer) Send(stream pb.Lake_SendServer) error {
+	var (
+		msgBoxID string = ""
+		msgBox   *sync.Map
+	)
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -37,10 +41,18 @@ func (ls *LakeServer) Send(stream pb.Lake_SendServer) error {
 		if err != nil {
 			return err
 		}
-		err = ls.msgStore.Produce(req.GetMsgBoxId(), req.GetMsgCapsule())
-		if err != nil {
-			return err
+		if msgBoxID != req.GetMsgBoxId() {
+			newMsgBox, err := ls.msgStore.Produce(req.GetMsgBoxId())
+			if err != nil {
+				return err
+			}
+			msgBoxID = req.GetMsgBoxId()
+			msgBox = newMsgBox
 		}
+		msgBox.Range(func(key, value any) bool {
+			value.(chan *pb.MsgCapsule) <- req.GetMsgCapsule()
+			return true
+		})
 	}
 }
 
