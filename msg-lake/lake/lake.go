@@ -1,8 +1,8 @@
 package lake
 
 import (
-	"context"
 	"fmt"
+	"io"
 	"sync"
 
 	"google.golang.org/grpc/codes"
@@ -28,12 +28,20 @@ func (ls *LakeServer) Close() {
 	// TODO: implement Close() method
 }
 
-func (ls *LakeServer) Send(ctx context.Context, req *pb.SendReq) (*pb.SendRes, error) {
-	err := ls.msgStore.Produce(req.GetMsgBoxId(), req.GetMsgCapsule())
-	if err != nil {
-		return nil, err
+func (ls *LakeServer) Send(stream pb.Lake_SendServer) error {
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return stream.SendAndClose(&pb.SendRes{Ok: true})
+		}
+		if err != nil {
+			return err
+		}
+		err = ls.msgStore.Produce(req.GetMsgBoxId(), req.GetMsgCapsule())
+		if err != nil {
+			return err
+		}
 	}
-	return &pb.SendRes{Ok: true}, nil
 }
 
 func (ls *LakeServer) Recv(req *pb.RecvReq, stream pb.Lake_RecvServer) error {

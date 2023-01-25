@@ -170,6 +170,11 @@ var Cmd = &cobra.Command{
 					defer wg.Done()
 					ticker := time.NewTicker(1 * time.Second)
 					defer ticker.Stop()
+					sendClient, err := cli.Send(ctx)
+					if err != nil {
+						fmt.Println(err)
+						return
+					}
 					for {
 						select {
 						case <-ctx.Done():
@@ -192,7 +197,7 @@ var Cmd = &cobra.Command{
 								continue
 							}
 
-							res, err := cli.Send(ctx, &pb.SendReq{
+							err = sendClient.Send(&pb.SendReq{
 								MsgBoxId: topic,
 								MsgCapsule: &pb.MsgCapsule{
 									Msg: msg,
@@ -202,16 +207,20 @@ var Cmd = &cobra.Command{
 									},
 								},
 							})
-							if err != nil {
-								if err == io.EOF || status.Code(err) > codes.OK {
-									fmt.Println("stop sending msgs")
-									return
+							if err == io.EOF || status.Code(err) > codes.OK {
+								fmt.Println("stop sending msgs")
+								res, err := sendClient.CloseAndRecv()
+								if err != nil {
+									fmt.Println(err)
 								}
-								fmt.Println(err)
+								if !res.Ok {
+									fmt.Println("failed to send msg")
+								}
 								return
 							}
-							if !res.Ok {
-								fmt.Println("failed to send msg")
+							if err != nil {
+								fmt.Println(err)
+								return
 							}
 						}
 					}

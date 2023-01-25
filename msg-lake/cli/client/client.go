@@ -125,6 +125,12 @@ var Cmd = &cobra.Command{
 		// execute goroutine (sender)
 		go func() {
 			reader := bufio.NewReader(os.Stdin)
+			sendClient, err := cli.Send(ctx)
+			if err != nil {
+				fmt.Println(err)
+				sigCh <- syscall.SIGINT
+				return
+			}
 			for {
 				printInput(false)
 				input, err := reader.ReadString('\n')
@@ -153,7 +159,7 @@ var Cmd = &cobra.Command{
 					continue
 				}
 
-				res, err := cli.Send(ctx, &pb.SendReq{
+				err = sendClient.Send(&pb.SendReq{
 					MsgBoxId: msgBoxID,
 					MsgCapsule: &pb.MsgCapsule{
 						Msg: msg,
@@ -163,13 +169,19 @@ var Cmd = &cobra.Command{
 						},
 					},
 				})
+				if err == io.EOF {
+					res, err := sendClient.CloseAndRecv()
+					if err != nil {
+						fmt.Println(err)
+					}
+					if !res.GetOk() {
+						fmt.Println("something went wrong on closing send client")
+					}
+					return
+				}
 				if err != nil {
 					fmt.Println(err)
 					continue
-				}
-
-				if !res.Ok {
-					fmt.Println("failed to send msg")
 				}
 			}
 		}()

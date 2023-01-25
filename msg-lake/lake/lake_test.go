@@ -63,9 +63,10 @@ func TestLake(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		sendClient, err := sender.Send(ctx)
+		assert.NoError(t, err)
 		for _, sampleMsg := range sampleMsgs {
-			res, err := sender.Send(
-				ctx,
+			err := sendClient.Send(
 				&pb.SendReq{
 					MsgBoxId: "test",
 					MsgCapsule: &pb.MsgCapsule{
@@ -74,8 +75,10 @@ func TestLake(t *testing.T) {
 				},
 			)
 			assert.NoError(t, err)
-			assert.Equal(t, true, res.GetOk())
 		}
+		res, err := sendClient.CloseAndRecv()
+		assert.NoError(t, err)
+		assert.True(t, res.GetOk())
 	}()
 
 	wg.Add(1)
