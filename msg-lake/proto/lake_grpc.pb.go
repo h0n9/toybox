@@ -22,7 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type LakeClient interface {
-	Send(ctx context.Context, in *SendReq, opts ...grpc.CallOption) (*SendRes, error)
+	Send(ctx context.Context, opts ...grpc.CallOption) (Lake_SendClient, error)
 	Recv(ctx context.Context, in *RecvReq, opts ...grpc.CallOption) (Lake_RecvClient, error)
 }
 
@@ -34,17 +34,42 @@ func NewLakeClient(cc grpc.ClientConnInterface) LakeClient {
 	return &lakeClient{cc}
 }
 
-func (c *lakeClient) Send(ctx context.Context, in *SendReq, opts ...grpc.CallOption) (*SendRes, error) {
-	out := new(SendRes)
-	err := c.cc.Invoke(ctx, "/Lake/Send", in, out, opts...)
+func (c *lakeClient) Send(ctx context.Context, opts ...grpc.CallOption) (Lake_SendClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Lake_ServiceDesc.Streams[0], "/Lake/Send", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &lakeSendClient{stream}
+	return x, nil
+}
+
+type Lake_SendClient interface {
+	Send(*SendReq) error
+	CloseAndRecv() (*SendRes, error)
+	grpc.ClientStream
+}
+
+type lakeSendClient struct {
+	grpc.ClientStream
+}
+
+func (x *lakeSendClient) Send(m *SendReq) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *lakeSendClient) CloseAndRecv() (*SendRes, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(SendRes)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (c *lakeClient) Recv(ctx context.Context, in *RecvReq, opts ...grpc.CallOption) (Lake_RecvClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Lake_ServiceDesc.Streams[0], "/Lake/Recv", opts...)
+	stream, err := c.cc.NewStream(ctx, &Lake_ServiceDesc.Streams[1], "/Lake/Recv", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +104,7 @@ func (x *lakeRecvClient) Recv() (*RecvRes, error) {
 // All implementations must embed UnimplementedLakeServer
 // for forward compatibility
 type LakeServer interface {
-	Send(context.Context, *SendReq) (*SendRes, error)
+	Send(Lake_SendServer) error
 	Recv(*RecvReq, Lake_RecvServer) error
 	mustEmbedUnimplementedLakeServer()
 }
@@ -88,8 +113,8 @@ type LakeServer interface {
 type UnimplementedLakeServer struct {
 }
 
-func (UnimplementedLakeServer) Send(context.Context, *SendReq) (*SendRes, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Send not implemented")
+func (UnimplementedLakeServer) Send(Lake_SendServer) error {
+	return status.Errorf(codes.Unimplemented, "method Send not implemented")
 }
 func (UnimplementedLakeServer) Recv(*RecvReq, Lake_RecvServer) error {
 	return status.Errorf(codes.Unimplemented, "method Recv not implemented")
@@ -107,22 +132,30 @@ func RegisterLakeServer(s grpc.ServiceRegistrar, srv LakeServer) {
 	s.RegisterService(&Lake_ServiceDesc, srv)
 }
 
-func _Lake_Send_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendReq)
-	if err := dec(in); err != nil {
+func _Lake_Send_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(LakeServer).Send(&lakeSendServer{stream})
+}
+
+type Lake_SendServer interface {
+	SendAndClose(*SendRes) error
+	Recv() (*SendReq, error)
+	grpc.ServerStream
+}
+
+type lakeSendServer struct {
+	grpc.ServerStream
+}
+
+func (x *lakeSendServer) SendAndClose(m *SendRes) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *lakeSendServer) Recv() (*SendReq, error) {
+	m := new(SendReq)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(LakeServer).Send(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/Lake/Send",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(LakeServer).Send(ctx, req.(*SendReq))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
 func _Lake_Recv_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -152,13 +185,13 @@ func (x *lakeRecvServer) Send(m *RecvRes) error {
 var Lake_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "Lake",
 	HandlerType: (*LakeServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Send",
-			Handler:    _Lake_Send_Handler,
-		},
-	},
+	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "Send",
+			Handler:       _Lake_Send_Handler,
+			ClientStreams: true,
+		},
 		{
 			StreamName:    "Recv",
 			Handler:       _Lake_Recv_Handler,

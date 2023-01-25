@@ -5,7 +5,7 @@ import "proto/types.proto";
 option go_package = "github.com/h0n9/toybox/msg-lake/proto";
 
 service Lake {
-  rpc Send(SendReq) returns (SendRes);
+  rpc Send(stream SendReq) returns (SendRes);
   rpc Recv(RecvReq) returns (stream RecvRes);
 }
 
