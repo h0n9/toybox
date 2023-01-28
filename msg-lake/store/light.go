@@ -8,7 +8,7 @@ import (
 )
 
 type MsgStoreLight struct {
-	msgBoxes *sync.Map // <msg_box_id>#<consumer_id>:<consumer_chans>
+	msgBoxes *sync.Map // <msg_box_id>:<msg_box>
 }
 
 func NewMsgStoreLight() *MsgStoreLight {
@@ -17,32 +17,44 @@ func NewMsgStoreLight() *MsgStoreLight {
 	}
 }
 
-func (store *MsgStoreLight) Produce(msgBoxID string) (*sync.Map, error) {
-	value, _ := store.msgBoxes.LoadOrStore(msgBoxID, &sync.Map{})
-	return value.(*sync.Map), nil
+func (store *MsgStoreLight) GetMsgBox(msgBoxID string) *MsgBoxLight {
+	value, _ := store.msgBoxes.LoadOrStore(msgBoxID, NewMsgBoxLight())
+	return value.(*MsgBoxLight)
 }
 
-func (store *MsgStoreLight) Consume(msgBoxID, consumerID string) (<-chan *pb.MsgCapsule, error) {
-	value, _ := store.msgBoxes.LoadOrStore(msgBoxID, &sync.Map{})
-	msgBox := value.(*sync.Map)
-	if _, exist := msgBox.Load(consumerID); exist {
+type MsgBoxLight struct {
+	msgCapsuleChans *sync.Map // <consumer_id>:<msg_capsule_chan>
+}
+
+func NewMsgBoxLight() *MsgBoxLight {
+	return &MsgBoxLight{msgCapsuleChans: &sync.Map{}}
+}
+
+func (box *MsgBoxLight) CreateMsgCapsuleChan(consumerID string) (MsgCapsuleChan, error) {
+	if _, exist := box.msgCapsuleChans.Load(consumerID); exist {
 		return nil, fmt.Errorf("found existing consumer chan for consumer id(%s)", consumerID)
 	}
-	consumerChan := make(chan *pb.MsgCapsule)
-	msgBox.Store(consumerID, consumerChan)
-	return consumerChan, nil
+	msgCapsuleChan := make(MsgCapsuleChan)
+	box.msgCapsuleChans.Store(consumerID, msgCapsuleChan)
+	return msgCapsuleChan, nil
 }
 
-func (store *MsgStoreLight) Sync(msgBoxID, consumerID string) error {
+func (box *MsgBoxLight) RemoveMsgCapsuleChan(consumerID string) error {
+	box.msgCapsuleChans.Delete(consumerID)
 	return nil
 }
 
-func (store *MsgStoreLight) Stop(msgBoxID, consumerID string) error {
-	value, exist := store.msgBoxes.Load(msgBoxID)
+func (box *MsgBoxLight) GetMsgCapsuleChan(consumerID string) (MsgCapsuleChan, error) {
+	value, exist := box.msgCapsuleChans.Load(consumerID)
 	if !exist {
-		return fmt.Errorf("failed to find msg box for id(%s)", msgBoxID)
+		return nil, fmt.Errorf("failed to find consumer chan for consumer id(%s)", consumerID)
 	}
-	msgBox := value.(*sync.Map)
-	msgBox.Delete(consumerID)
-	return nil
+	return value.(MsgCapsuleChan), nil
+}
+
+func (box *MsgBoxLight) SendMsgCapsule(msgCapsule *pb.MsgCapsule) {
+	box.msgCapsuleChans.Range(func(key, value any) bool {
+		value.(MsgCapsuleChan) <- msgCapsule
+		return true
+	})
 }
