@@ -39,7 +39,7 @@ func (store *MsgStoreMemory) Produce(msgBoxID string, msgCapsule *pb.MsgCapsule)
 	}
 
 	value, _ := store.msgBoxes.LoadOrStore(msgBoxID, NewMsgBox())
-	msgBox := value.(*MsgBox)
+	msgBox := value.(*MsgBoxMemory)
 
 	// 1. store msg
 	offset := msgBox.Append(msgCapsule)
@@ -57,7 +57,7 @@ func (store *MsgStoreMemory) Produce(msgBoxID string, msgCapsule *pb.MsgCapsule)
 
 func (store *MsgStoreMemory) Consume(msgBoxID, consumerID string) (<-chan *pb.MsgCapsule, error) {
 	value, _ := store.msgBoxes.LoadOrStore(msgBoxID, NewMsgBox())
-	msgBox := value.(*MsgBox)
+	msgBox := value.(*MsgBoxMemory)
 	return msgBox.CreateConsumerChan(consumerID)
 }
 
@@ -66,7 +66,7 @@ func (store *MsgStoreMemory) Sync(msgBoxID, consumerID string) error {
 	if !exist {
 		return fmt.Errorf("failed to find msg box for id(%s)", msgBoxID)
 	}
-	msgBox := value.(*MsgBox)
+	msgBox := value.(*MsgBoxMemory)
 	consumerChan, err := msgBox.GetConsumerChan(consumerID)
 	if err != nil {
 		return err
@@ -94,6 +94,63 @@ func (store *MsgStoreMemory) Stop(msgBoxID, consumerID string) error {
 	if !exist {
 		return fmt.Errorf("failed to find msg box for id(%s)", msgBoxID)
 	}
-	msgBox := value.(*MsgBox)
+	msgBox := value.(*MsgBoxMemory)
 	return msgBox.RemoveConsumerChan(consumerID)
+}
+
+type MsgBoxMemory struct {
+	frontOffset     uint64
+	backOffset      uint64
+	msgCapsules     *sync.Map // <offset>:<msg_capsule>
+	consumerChans   *sync.Map // <consumer_id>:<consumer_chan>
+	consumerOffsets *sync.Map // <consumer_id>:<consumer_offset>
+}
+
+func NewMsgBox() *MsgBoxMemory {
+	return &MsgBoxMemory{
+		frontOffset:     0,
+		backOffset:      0,
+		msgCapsules:     &sync.Map{},
+		consumerChans:   &sync.Map{},
+		consumerOffsets: &sync.Map{},
+	}
+}
+
+func (box *MsgBoxMemory) Append(msgCapsule *pb.MsgCapsule) uint64 {
+	offset := atomic.LoadUint64(&box.backOffset)
+	box.msgCapsules.Store(offset, msgCapsule)
+	offset = atomic.AddUint64(&box.backOffset, 1)
+	return offset
+}
+
+func (box *MsgBoxMemory) Len() uint64 {
+	frontOffset := atomic.LoadUint64(&box.frontOffset)
+	backOffset := atomic.LoadUint64(&box.backOffset)
+	if frontOffset == backOffset {
+		return 0
+	}
+	return backOffset - frontOffset + 1
+}
+
+func (box *MsgBoxMemory) CreateConsumerChan(consumerID string) (chan *pb.MsgCapsule, error) {
+	_, exist := box.consumerChans.Load(consumerID)
+	if exist {
+		return nil, fmt.Errorf("found existing consumer chan for consumer id(%s)", consumerID)
+	}
+	consumerChan := make(chan *pb.MsgCapsule)
+	box.consumerChans.Store(consumerID, consumerChan)
+	return consumerChan, nil
+}
+
+func (box *MsgBoxMemory) RemoveConsumerChan(consumerID string) error {
+	box.consumerChans.Delete(consumerID)
+	return nil
+}
+
+func (box *MsgBoxMemory) GetConsumerChan(consumerID string) (chan *pb.MsgCapsule, error) {
+	value, exist := box.consumerChans.Load(consumerID)
+	if !exist {
+		return nil, fmt.Errorf("failed to find consumer chan for consumer id(%s)", consumerID)
+	}
+	return value.(chan *pb.MsgCapsule), nil
 }
