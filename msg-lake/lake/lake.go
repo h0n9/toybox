@@ -15,12 +15,12 @@ import (
 type LakeServer struct {
 	pb.UnimplementedLakeServer
 
-	msgStore store.MsgStore
+	msgStore *store.MsgStoreLight
 }
 
-func NewLakeServer(msgStore store.MsgStore) *LakeServer {
+func NewLakeServer() *LakeServer {
 	return &LakeServer{
-		msgStore: msgStore,
+		msgStore: store.NewMsgStoreLight(),
 	}
 }
 
@@ -31,7 +31,7 @@ func (ls *LakeServer) Close() {
 func (ls *LakeServer) Send(stream pb.Lake_SendServer) error {
 	var (
 		msgBoxID string = ""
-		msgBox   *sync.Map
+		msgBox   *store.MsgBoxLight
 	)
 	for {
 		req, err := stream.Recv()
@@ -41,18 +41,12 @@ func (ls *LakeServer) Send(stream pb.Lake_SendServer) error {
 		if err != nil {
 			return err
 		}
-		if msgBoxID != req.GetMsgBoxId() {
-			newMsgBox, err := ls.msgStore.Produce(req.GetMsgBoxId())
-			if err != nil {
-				return err
-			}
-			msgBoxID = req.GetMsgBoxId()
-			msgBox = newMsgBox
+		newMsgBoxID := req.GetMsgBoxId()
+		if msgBoxID != newMsgBoxID {
+			msgBoxID = newMsgBoxID
+			msgBox = ls.msgStore.GetMsgBox(msgBoxID)
 		}
-		msgBox.Range(func(key, value any) bool {
-			value.(chan *pb.MsgCapsule) <- req.GetMsgCapsule()
-			return true
-		})
+		go msgBox.SendMsgCapsule(req.GetMsgCapsule())
 	}
 }
 
@@ -60,7 +54,8 @@ func (ls *LakeServer) Recv(req *pb.RecvReq, stream pb.Lake_RecvServer) error {
 	msgBoxID := req.GetMsgBoxId()
 	consumerID := req.GetConsumerId()
 
-	consumerChan, err := ls.msgStore.Consume(msgBoxID, consumerID)
+	msgBox := ls.msgStore.GetMsgBox(msgBoxID)
+	msgCapsuleChan, err := msgBox.CreateMsgCapsuleChan(consumerID)
 	if err != nil {
 		return err
 	}
@@ -75,13 +70,10 @@ func (ls *LakeServer) Recv(req *pb.RecvReq, stream pb.Lake_RecvServer) error {
 		for {
 			select {
 			case <-stream.Context().Done():
-				err := ls.msgStore.Stop(msgBoxID, consumerID)
-				if err != nil {
-					fmt.Println(err)
-				}
+				msgBox.RemoveMsgCapsuleChan(consumerID)
 				return
-			case msgCapsule := <-consumerChan:
-				err = stream.Send(&pb.RecvRes{MsgCapsule: msgCapsule})
+			case msgCapsule := <-msgCapsuleChan:
+				err := stream.Send(&pb.RecvRes{MsgCapsule: msgCapsule})
 				if err != nil {
 					code := status.Code(err)
 					if code != codes.Canceled && code != codes.Unavailable {

@@ -12,7 +12,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	pb "github.com/h0n9/toybox/msg-lake/proto"
-	"github.com/h0n9/toybox/msg-lake/store"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,12 +30,9 @@ func TestLake(t *testing.T) {
 		})
 	}
 
-	// init msgStore
-	msgStore := store.NewMsgStoreLight()
-
 	// init server
 	grpcServer := grpc.NewServer()
-	lakeServer := NewLakeServer(msgStore)
+	lakeServer := NewLakeServer()
 	pb.RegisterLakeServer(grpcServer, lakeServer)
 	listener, err := net.Listen("tcp", addr)
 	assert.NoError(t, err)

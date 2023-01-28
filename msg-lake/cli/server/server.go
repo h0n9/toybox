@@ -13,7 +13,6 @@ import (
 
 	"github.com/h0n9/toybox/msg-lake/lake"
 	"github.com/h0n9/toybox/msg-lake/proto"
-	"github.com/h0n9/toybox/msg-lake/store"
 )
 
 var (
@@ -68,12 +67,9 @@ var Cmd = &cobra.Command{
 			}
 		}()
 
-		// init msgStore
-		msgStore := store.NewMsgStoreLight()
-
 		// init grpc, lake servers and register lakeServer to grpcServer
 		grpcServer = grpc.NewServer()
-		lakeServer = lake.NewLakeServer(msgStore)
+		lakeServer = lake.NewLakeServer()
 		proto.RegisterLakeServer(grpcServer, lakeServer)
 
 		wg.Add(1)
