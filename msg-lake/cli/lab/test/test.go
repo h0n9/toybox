@@ -83,7 +83,10 @@ var Cmd = &cobra.Command{
 
 			for _, conn := range conns {
 				fmt.Printf("closing grpc client ... ")
-				conn.Close()
+				err := conn.Close()
+				if err != nil {
+					fmt.Println(err)
+				}
 				fmt.Printf("done\n")
 			}
 		}()
@@ -138,7 +141,6 @@ var Cmd = &cobra.Command{
 						default:
 							data, err := stream.Recv()
 							if err == io.EOF || status.Code(err) > codes.OK {
-								fmt.Println("stop receiving msgs")
 								return
 							}
 							if err != nil {
@@ -208,7 +210,6 @@ var Cmd = &cobra.Command{
 								},
 							})
 							if err == io.EOF || status.Code(err) > codes.OK {
-								fmt.Println("stop sending msgs")
 								res, err := sendClient.CloseAndRecv()
 								if err != nil {
 									fmt.Println(err)
