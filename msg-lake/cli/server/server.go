@@ -50,14 +50,14 @@ var Cmd = &cobra.Command{
 			sig := <-sigCh
 
 			fmt.Println("\r\ngot", sig.String())
-			if grpcServer != nil {
-				fmt.Printf("closing grpc server ... ")
-				grpcServer.GracefulStop()
-				fmt.Printf("done\n")
-			}
 			if lakeServer != nil {
 				fmt.Printf("closing lake server ... ")
 				lakeServer.Close()
+				fmt.Printf("done\n")
+			}
+			if grpcServer != nil {
+				fmt.Printf("closing grpc server ... ")
+				grpcServer.GracefulStop()
 				fmt.Printf("done\n")
 			}
 			if listener != nil {
