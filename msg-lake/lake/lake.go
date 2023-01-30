@@ -1,26 +1,27 @@
 package lake
 
 import (
+	"context"
 	"fmt"
 	"io"
-	"sync"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	pb "github.com/h0n9/toybox/msg-lake/proto"
 	"github.com/h0n9/toybox/msg-lake/store"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type LakeServer struct {
 	pb.UnimplementedLakeServer
 
+	ctx      context.Context
 	msgStore *store.MsgStoreLight
 }
 
-func NewLakeServer() *LakeServer {
+func NewLakeServer(ctx context.Context) *LakeServer {
 	return &LakeServer{
-		msgStore: store.NewMsgStoreLight(),
+		ctx:      ctx,
+		msgStore: store.NewMsgStoreLight(ctx),
 	}
 }
 
@@ -32,6 +33,8 @@ func (ls *LakeServer) Send(stream pb.Lake_SendServer) error {
 	var (
 		msgBoxID string = ""
 		msgBox   *store.MsgBoxLight
+
+		producerChan store.MsgCapsuleChan
 	)
 	for {
 		req, err := stream.Recv()
@@ -45,8 +48,9 @@ func (ls *LakeServer) Send(stream pb.Lake_SendServer) error {
 		if msgBoxID != newMsgBoxID {
 			msgBoxID = newMsgBoxID
 			msgBox = ls.msgStore.GetMsgBox(msgBoxID)
+			producerChan = msgBox.GetProducerChan()
 		}
-		go msgBox.SendMsgCapsule(req.GetMsgCapsule())
+		producerChan <- req.GetMsgCapsule()
 	}
 }
 
@@ -55,37 +59,30 @@ func (ls *LakeServer) Recv(req *pb.RecvReq, stream pb.Lake_RecvServer) error {
 	consumerID := req.GetConsumerId()
 
 	msgBox := ls.msgStore.GetMsgBox(msgBoxID)
-	msgCapsuleChan, err := msgBox.CreateMsgCapsuleChan(consumerID)
+	consumerChan := make(store.MsgCapsuleChan, 1000)
+	errorChan := make(chan error)
+	defer close(errorChan)
+	msgBox.SetConsumerChan(consumerID, consumerChan, errorChan)
+	err := <-errorChan
 	if err != nil {
 		return err
 	}
 
-	// init wait group
-	wg := sync.WaitGroup{}
-
 	// stream msgCapsules
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case <-stream.Context().Done():
-				msgBox.RemoveMsgCapsuleChan(consumerID)
-				return
-			case msgCapsule := <-msgCapsuleChan:
-				err := stream.Send(&pb.RecvRes{MsgCapsule: msgCapsule})
-				if err != nil {
-					code := status.Code(err)
-					if code != codes.Canceled && code != codes.Unavailable {
-						fmt.Println(err)
-					}
-					continue
+	for {
+		select {
+		case <-stream.Context().Done():
+			msgBox.CloseConsumerChan(consumerID, errorChan)
+			return nil
+		case msgCapsule := <-consumerChan:
+			err := stream.Send(&pb.RecvRes{MsgCapsule: msgCapsule})
+			if err != nil {
+				code := status.Code(err)
+				if code != codes.Canceled && code != codes.Unavailable {
+					fmt.Println(err)
 				}
+				continue
 			}
 		}
-	}()
-
-	wg.Wait()
-
-	return nil
+	}
 }

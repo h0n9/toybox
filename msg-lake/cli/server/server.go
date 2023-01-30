@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -31,9 +32,13 @@ var Cmd = &cobra.Command{
 		// init wg
 		wg := sync.WaitGroup{}
 
+		// init context
+		ctx, cancel := context.WithCancel(context.Background())
+
 		// init listener
 		listener, err := net.Listen("tcp", listenAddr)
 		if err != nil {
+			cancel()
 			return err
 		}
 
@@ -48,6 +53,9 @@ var Cmd = &cobra.Command{
 			defer wg.Done()
 
 			sig := <-sigCh
+
+			// cancel context
+			cancel()
 
 			fmt.Println("\r\ngot", sig.String())
 			if lakeServer != nil {
@@ -69,7 +77,7 @@ var Cmd = &cobra.Command{
 
 		// init grpc, lake servers and register lakeServer to grpcServer
 		grpcServer = grpc.NewServer()
-		lakeServer = lake.NewLakeServer()
+		lakeServer = lake.NewLakeServer(ctx)
 		proto.RegisterLakeServer(grpcServer, lakeServer)
 
 		wg.Add(1)

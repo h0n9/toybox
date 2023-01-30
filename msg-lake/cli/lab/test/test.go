@@ -60,7 +60,9 @@ var Cmd = &cobra.Command{
 		if tlsEnabled {
 			creds = grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{}))
 		}
-		wg := sync.WaitGroup{}
+
+		mainWg := sync.WaitGroup{}
+		subWg := sync.WaitGroup{}
 
 		// init sig channel
 		sigCh := make(chan os.Signal, 1)
@@ -68,9 +70,9 @@ var Cmd = &cobra.Command{
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 		// listen signals
-		wg.Add(1)
+		mainWg.Add(1)
 		go func() {
-			defer wg.Done()
+			defer mainWg.Done()
 
 			sig := <-sigCh
 			fmt.Println("\r\ngot", sig.String())
@@ -80,6 +82,8 @@ var Cmd = &cobra.Command{
 			fmt.Printf("cancelling ctx ... ")
 			cancel()
 			fmt.Printf("done\n")
+
+			subWg.Wait()
 
 			for _, conn := range conns {
 				fmt.Printf("closing grpc client ... ")
@@ -123,9 +127,9 @@ var Cmd = &cobra.Command{
 				}
 				topic := fmt.Sprintf("topic-%d", topicIndex)
 				// execute goroutine (receiver)
-				wg.Add(1)
+				subWg.Add(1)
 				go func() {
-					defer wg.Done()
+					defer subWg.Done()
 					stream, err := cli.Recv(ctx, &pb.RecvReq{
 						MsgBoxId:   topic,
 						ConsumerId: nickname,
@@ -167,9 +171,9 @@ var Cmd = &cobra.Command{
 				}()
 
 				// execute goroutine (sender)
-				wg.Add(1)
+				subWg.Add(1)
 				go func() {
-					defer wg.Done()
+					defer subWg.Done()
 					ticker := time.NewTicker(1 * time.Second)
 					defer ticker.Stop()
 					sendClient, err := cli.Send(ctx)
@@ -180,6 +184,15 @@ var Cmd = &cobra.Command{
 					for {
 						select {
 						case <-ctx.Done():
+							res, err := sendClient.CloseAndRecv()
+							if err != nil {
+								fmt.Println(err)
+								return
+							}
+							if !res.Ok {
+								fmt.Println("failed to send msg")
+								return
+							}
 							return
 						case <-ticker.C:
 							msg := &pb.Msg{
@@ -209,17 +222,6 @@ var Cmd = &cobra.Command{
 									},
 								},
 							})
-							if err == io.EOF || status.Code(err) > codes.OK {
-								res, err := sendClient.CloseAndRecv()
-								if err != nil {
-									fmt.Println(err)
-									return
-								}
-								if !res.Ok {
-									fmt.Println("failed to send msg")
-									return
-								}
-							}
 							if err != nil {
 								fmt.Println(err)
 								return
@@ -231,7 +233,7 @@ var Cmd = &cobra.Command{
 			time.Sleep(1 * time.Millisecond)
 		}
 		fmt.Printf("successfully initiated clients: %d\n", numOfTopics*numOfUsers)
-		wg.Wait()
+		mainWg.Wait()
 		return nil
 	},
 }

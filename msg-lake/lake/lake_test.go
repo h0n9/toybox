@@ -32,7 +32,7 @@ func TestLake(t *testing.T) {
 
 	// init server
 	grpcServer := grpc.NewServer()
-	lakeServer := NewLakeServer()
+	lakeServer := NewLakeServer(context.Background())
 	pb.RegisterLakeServer(grpcServer, lakeServer)
 	listener, err := net.Listen("tcp", addr)
 	assert.NoError(t, err)

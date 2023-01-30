@@ -102,7 +102,7 @@ var Cmd = &cobra.Command{
 
 			for {
 				data, err := stream.Recv()
-				if err == io.EOF || status.Code(err) == codes.Canceled {
+				if err == io.EOF || status.Code(err) > codes.OK {
 					fmt.Println("stop receiving msgs")
 					break
 				}
