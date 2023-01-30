@@ -117,27 +117,27 @@ func (box *MsgBoxLight) Relay(ctx context.Context) {
 			fmt.Println("setConsumerChan")
 			consumerID = setConsumerChan.consumerID
 			consumerChan = setConsumerChan.consumerChan
-			// errorChan = setConsumerChan.errorChan
+			errorChan = setConsumerChan.errorChan
 			if _, exist := box.consumerChans[consumerID]; exist {
-				// errorChan <- fmt.Errorf("found existing consumer chan for consumer id(%s)", consumerID)
+				errorChan <- fmt.Errorf("found existing consumer chan for consumer id(%s)", consumerID)
 				continue
 			}
 			box.consumerChans[consumerID] = consumerChan
-			// errorChan <- nil
+			errorChan <- nil
 
 		// handling operation: closeConsumerChan
 		case closeConsumerChan = <-box.closeConsumerChan:
 			fmt.Println("closeConsumerChan")
 			consumerID = closeConsumerChan.consumerID
-			errorChan = closeConsumerChan.errorChan
+			// errorChan = closeConsumerChan.errorChan
 			consumerChan, exist := box.consumerChans[consumerID]
 			if !exist {
-				errorChan <- fmt.Errorf("failed to find consumer chan for consumer id(%s)", consumerID)
+				// errorChan <- fmt.Errorf("failed to find consumer chan for consumer id(%s)", consumerID)
 				continue
 			}
 			close(consumerChan)
 			delete(box.consumerChans, consumerID)
-			errorChan <- nil
+			// errorChan <- nil
 
 		// handling msg
 		case msgCapsule = <-box.producerChan:
