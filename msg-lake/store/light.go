@@ -104,7 +104,6 @@ func (box *MsgBoxLight) Relay(ctx context.Context) {
 		select {
 		// handling done ctx
 		case <-ctx.Done():
-			fmt.Println("done")
 			for consumerID, consumerChan = range box.consumerChans {
 				close(consumerChan)
 				delete(box.consumerChans, consumerID)
@@ -114,7 +113,6 @@ func (box *MsgBoxLight) Relay(ctx context.Context) {
 
 		// handling operation: setConsumerChan
 		case setConsumerChan = <-box.setConsumerChan:
-			fmt.Println("setConsumerChan")
 			consumerID = setConsumerChan.consumerID
 			consumerChan = setConsumerChan.consumerChan
 			errorChan = setConsumerChan.errorChan
@@ -127,17 +125,14 @@ func (box *MsgBoxLight) Relay(ctx context.Context) {
 
 		// handling operation: closeConsumerChan
 		case closeConsumerChan = <-box.closeConsumerChan:
-			fmt.Println("closeConsumerChan")
 			consumerID = closeConsumerChan.consumerID
 			// errorChan = closeConsumerChan.errorChan
 			consumerChan, exist := box.consumerChans[consumerID]
 			if !exist {
-				// errorChan <- fmt.Errorf("failed to find consumer chan for consumer id(%s)", consumerID)
 				continue
 			}
 			close(consumerChan)
 			delete(box.consumerChans, consumerID)
-			// errorChan <- nil
 
 		// handling msg
 		case msgCapsule = <-box.producerChan:
