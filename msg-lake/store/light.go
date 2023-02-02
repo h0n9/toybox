@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-
-	pb "github.com/h0n9/toybox/msg-lake/proto"
 )
 
 type MsgStoreLight struct {
@@ -61,7 +59,7 @@ func NewMsgBoxLight() *MsgBoxLight {
 		setConsumerChan:   make(chan setConsumerChan, 10),
 		closeConsumerChan: make(chan closeConsumerChan, 10),
 
-		producerChan:  make(MsgCapsuleChan, 1000),
+		producerChan:  make(MsgCapsuleChan, 10000),
 		consumerChans: make(map[string]MsgCapsuleChan),
 	}
 }
@@ -70,12 +68,14 @@ func (box *MsgBoxLight) GetProducerChan() MsgCapsuleChan {
 	return box.producerChan
 }
 
-func (box *MsgBoxLight) SetConsumerChan(consumerID string, consumerChan MsgCapsuleChan, errorChan chan error) {
+func (box *MsgBoxLight) SetConsumerChan(consumerID string, errorChan chan error) MsgCapsuleChan {
+	consumerChan := make(MsgCapsuleChan)
 	box.setConsumerChan <- setConsumerChan{
 		consumerID:   consumerID,
 		consumerChan: consumerChan,
 		errorChan:    errorChan,
 	}
+	return consumerChan
 }
 
 func (box *MsgBoxLight) CloseConsumerChan(consumerID string, errorChan chan error) {
@@ -90,10 +90,6 @@ func (box *MsgBoxLight) Relay(ctx context.Context) {
 		setConsumerChan   setConsumerChan
 		closeConsumerChan closeConsumerChan
 		errorChan         chan error
-
-		consumerID   string
-		consumerChan MsgCapsuleChan
-		msgCapsule   *pb.MsgCapsule
 	)
 	if box.isRelaying {
 		return
@@ -103,7 +99,7 @@ func (box *MsgBoxLight) Relay(ctx context.Context) {
 		select {
 		// handling done ctx
 		case <-ctx.Done():
-			for consumerID, consumerChan = range box.consumerChans {
+			for consumerID, consumerChan := range box.consumerChans {
 				close(consumerChan)
 				delete(box.consumerChans, consumerID)
 			}
@@ -112,8 +108,8 @@ func (box *MsgBoxLight) Relay(ctx context.Context) {
 
 		// handling operation: setConsumerChan
 		case setConsumerChan = <-box.setConsumerChan:
-			consumerID = setConsumerChan.consumerID
-			consumerChan = setConsumerChan.consumerChan
+			consumerID := setConsumerChan.consumerID
+			consumerChan := setConsumerChan.consumerChan
 			errorChan = setConsumerChan.errorChan
 			if _, exist := box.consumerChans[consumerID]; exist {
 				errorChan <- fmt.Errorf("found existing consumer chan for consumer id(%s)", consumerID)
@@ -124,7 +120,7 @@ func (box *MsgBoxLight) Relay(ctx context.Context) {
 
 		// handling operation: closeConsumerChan
 		case closeConsumerChan = <-box.closeConsumerChan:
-			consumerID = closeConsumerChan.consumerID
+			consumerID := closeConsumerChan.consumerID
 			_, exist := box.consumerChans[consumerID]
 			if !exist {
 				continue
@@ -133,12 +129,10 @@ func (box *MsgBoxLight) Relay(ctx context.Context) {
 			delete(box.consumerChans, consumerID)
 
 		// handling msg
-		case msgCapsule = <-box.producerChan:
-			go func() {
-				for _, consumerChan := range box.consumerChans {
-					consumerChan <- msgCapsule
-				}
-			}()
+		case msgCapsule := <-box.producerChan:
+			for _, consumerChan := range box.consumerChans {
+				consumerChan <- msgCapsule
+			}
 		}
 	}
 }

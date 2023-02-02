@@ -59,16 +59,14 @@ func (ls *LakeServer) Recv(req *pb.RecvReq, stream pb.Lake_RecvServer) error {
 	consumerID := req.GetConsumerId()
 
 	msgBox := ls.msgStore.GetMsgBox(msgBoxID)
-	consumerChan := make(store.MsgCapsuleChan, 1000)
 	errorChan := make(chan error)
 	defer close(errorChan)
-	msgBox.SetConsumerChan(consumerID, consumerChan, errorChan)
+	consumerChan := msgBox.SetConsumerChan(consumerID, errorChan)
 	err := <-errorChan
 	if err != nil {
 		return err
 	}
 
-	// stream msgCapsules
 	for {
 		select {
 		case <-stream.Context().Done():
@@ -81,7 +79,6 @@ func (ls *LakeServer) Recv(req *pb.RecvReq, stream pb.Lake_RecvServer) error {
 				if code != codes.Canceled && code != codes.Unavailable {
 					fmt.Println(err)
 				}
-				continue
 			}
 		}
 	}
