@@ -121,11 +121,11 @@ func (box *MsgBoxLight) Relay(ctx context.Context) {
 		// handling operation: closeConsumerChan
 		case closeConsumerChan = <-box.closeConsumerChan:
 			consumerID := closeConsumerChan.consumerID
-			_, exist := box.consumerChans[consumerID]
+			consumerChan, exist := box.consumerChans[consumerID]
 			if !exist {
 				continue
 			}
-			// close(consumerChan)
+			close(consumerChan)
 			delete(box.consumerChans, consumerID)
 
 		// handling msg
