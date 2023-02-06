@@ -6,6 +6,11 @@ import (
 	"sync"
 )
 
+const (
+	ProducerChanBuffSize = 10000
+	ConsumerChanBuffSize = 100
+)
+
 type MsgStoreLight struct {
 	ctx      context.Context
 	msgBoxes *sync.Map // <msg_box_id>:<msg_box>
@@ -59,7 +64,7 @@ func NewMsgBoxLight() *MsgBoxLight {
 		setConsumerChan:   make(chan setConsumerChan, 10),
 		closeConsumerChan: make(chan closeConsumerChan, 10),
 
-		producerChan:  make(MsgCapsuleChan, 10000),
+		producerChan:  make(MsgCapsuleChan, ProducerChanBuffSize),
 		consumerChans: make(map[string]MsgCapsuleChan),
 	}
 }
@@ -69,7 +74,7 @@ func (box *MsgBoxLight) GetProducerChan() MsgCapsuleChan {
 }
 
 func (box *MsgBoxLight) SetConsumerChan(consumerID string, errorChan chan error) MsgCapsuleChan {
-	consumerChan := make(MsgCapsuleChan)
+	consumerChan := make(MsgCapsuleChan, ConsumerChanBuffSize)
 	box.setConsumerChan <- setConsumerChan{
 		consumerID:   consumerID,
 		consumerChan: consumerChan,
