@@ -42,7 +42,6 @@ type setConsumerChan struct {
 
 type closeConsumerChan struct {
 	consumerID string
-	errorChan  chan error
 }
 
 type MsgBoxLight struct {
@@ -73,21 +72,24 @@ func (box *MsgBoxLight) GetProducerChan() MsgCapsuleChan {
 	return box.producerChan
 }
 
-func (box *MsgBoxLight) SetConsumerChan(consumerID string, errorChan chan error) MsgCapsuleChan {
+func (box *MsgBoxLight) SetConsumerChan(consumerID string) (MsgCapsuleChan, error) {
 	consumerChan := make(MsgCapsuleChan, ConsumerChanBuffSize)
+	errorChan := make(chan error)
+	defer close(errorChan)
 	box.setConsumerChan <- setConsumerChan{
 		consumerID:   consumerID,
 		consumerChan: consumerChan,
 		errorChan:    errorChan,
 	}
-	return consumerChan
+	err := <-errorChan
+	if err != nil {
+		return nil, err
+	}
+	return consumerChan, nil
 }
 
-func (box *MsgBoxLight) CloseConsumerChan(consumerID string, errorChan chan error) {
-	box.closeConsumerChan <- closeConsumerChan{
-		consumerID: consumerID,
-		errorChan:  errorChan,
-	}
+func (box *MsgBoxLight) CloseConsumerChan(consumerID string) {
+	box.closeConsumerChan <- closeConsumerChan{consumerID: consumerID}
 }
 
 func (box *MsgBoxLight) Relay(ctx context.Context) {
