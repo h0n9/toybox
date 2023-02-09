@@ -1,0 +1,40 @@
+version: "3.8"
+services:
+  server:
+    image: h0n9/msg-lake
+    build:
+      context: .
+    command: ["server"]
+    healthcheck:
+      test: ["grpc_health_probe", "-addr=:8080"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    networks:
+      msg-lake-net:
+        ipv4_address: 172.19.0.2
+  client:
+    depends_on:
+    - server
+    image: h0n9/msg-lake
+    build:
+      context: .
+    command: ["client", "-b", "topic-0", "--host", "172.19.0.2:8080"]
+    networks:
+      - msg-lake-net
+  load:
+    depends_on:
+    - server
+    image: h0n9/msg-lake
+    build:
+      context: .
+    command: ["lab", "test", "-u", "100", "--host", "172.19.0.2:8080"]
+    networks:
+      - msg-lake-net
+networks:
+  msg-lake-net:
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.19.0.0/16
