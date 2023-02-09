@@ -11,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health/grpc_health_v1"
 
 	"github.com/h0n9/toybox/msg-lake/lake"
 	"github.com/h0n9/toybox/msg-lake/proto"
@@ -79,6 +80,9 @@ var Cmd = &cobra.Command{
 		grpcServer = grpc.NewServer()
 		lakeServer = lake.NewLakeServer(ctx)
 		proto.RegisterLakeServer(grpcServer, lakeServer)
+
+		healthServer := lake.NewHealthServer()
+		grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 
 		wg.Add(1)
 		go func() {
