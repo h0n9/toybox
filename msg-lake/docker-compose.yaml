@@ -5,18 +5,21 @@ services:
     build:
       context: .
     command: ["server"]
+    ports:
+      - 8080:8080
     healthcheck:
-      test: ["grpc_health_probe", "-addr=:8080"]
-      interval: 10s
+      test: ["CMD", "grpc_health_probe", "-addr=:8080"]
+      start_period: 1s
+      interval: 1s
       timeout: 30s
       retries: 5
-      start_period: 30s
     networks:
       msg-lake-net:
         ipv4_address: 172.19.0.2
   client:
     depends_on:
-    - server
+      server:
+        condition: service_healthy
     image: h0n9/msg-lake
     build:
       context: .
@@ -25,7 +28,8 @@ services:
       - msg-lake-net
   load:
     depends_on:
-    - server
+      server:
+        condition: service_healthy
     image: h0n9/msg-lake
     build:
       context: .
@@ -37,4 +41,4 @@ networks:
     ipam:
       driver: default
       config:
-      - subnet: 172.19.0.0/16
+       - subnet: 172.19.0.0/16
