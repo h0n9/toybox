@@ -131,6 +131,19 @@ var Cmd = &cobra.Command{
 					fmt.Println(err)
 					return
 				}
+				msg := &pb.Msg{
+					Metadata: map[string][]byte{
+						"nickname": []byte(nickname),
+					},
+				}
+				req := &pb.SendReq{
+					MsgBoxId: msgBoxID,
+					MsgCapsule: &pb.MsgCapsule{
+						Signature: &pb.Signature{
+							PubKey: pubKeyBytes,
+						},
+					},
+				}
 				for {
 					select {
 					case <-ctx.Done():
@@ -140,12 +153,7 @@ var Cmd = &cobra.Command{
 						}
 						return
 					case <-ticker.C:
-						msg := &pb.Msg{
-							Data: []byte(fmt.Sprintf("helloworld-%d", time.Now().UnixNano())),
-							Metadata: map[string][]byte{
-								"nickname": []byte(nickname),
-							},
-						}
+						msg.Data = []byte(fmt.Sprintf("helloworld-%d", time.Now().UnixNano()))
 						data, err := proto.Marshal(msg)
 						if err != nil {
 							fmt.Println(err)
@@ -156,16 +164,9 @@ var Cmd = &cobra.Command{
 							fmt.Println(err)
 							continue
 						}
-						err = sender.Send(&pb.SendReq{
-							MsgBoxId: msgBoxID,
-							MsgCapsule: &pb.MsgCapsule{
-								Msg: msg,
-								Signature: &pb.Signature{
-									PubKey:   pubKeyBytes,
-									SigBytes: sigBytes,
-								},
-							},
-						})
+						req.MsgCapsule.Msg = msg
+						req.MsgCapsule.Signature.SigBytes = sigBytes
+						err = sender.Send(req)
 						if err == io.EOF {
 							return
 						}
