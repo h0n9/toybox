@@ -67,8 +67,7 @@ func (ls *LakeServer) Recv(req *pb.RecvReq, stream pb.Lake_RecvServer) error {
 	for {
 		select {
 		case <-stream.Context().Done():
-			msgBox.CloseConsumerChan(consumerID)
-			return nil
+			return msgBox.CloseConsumerChan(consumerID)
 		case msgCapsule := <-consumerChan:
 			err := stream.Send(&pb.RecvRes{MsgCapsule: msgCapsule})
 			if err != nil {
