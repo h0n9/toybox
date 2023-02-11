@@ -3,8 +3,10 @@ package box
 import "github.com/h0n9/toybox/msg-lake/msg"
 
 const (
-	ProducerChanBuffSize = 10000
-	ConsumerChanBuffSize = 100
+	SetConsumerChanBuffSize    = 10
+	DeleteConsumerChanBuffSize = 10
+	ProducerChanBuffSize       = 10000
+	ConsumerChanBuffSize       = 100
 )
 
 type setConsumerChan struct {
@@ -13,7 +15,7 @@ type setConsumerChan struct {
 	errorChan    chan error
 }
 
-type closeConsumerChan struct {
+type deleteConsumerChan struct {
 	consumerID string
 	errorChan  chan error
 }

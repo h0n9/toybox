@@ -62,7 +62,7 @@ func (ls *LakeServer) Recv(req *pb.RecvReq, stream pb.Lake_RecvServer) error {
 	consumerID := req.GetConsumerId()
 
 	msgBox := ls.msgCenter.GetMsgBox(msgBoxID)
-	consumerChan, err := msgBox.SetConsumerChan(consumerID)
+	consumerChan, err := msgBox.CreateConsumerChan(consumerID)
 	if err != nil {
 		return err
 	}

@@ -11,8 +11,8 @@ type Light struct {
 	isRelaying bool
 
 	// chans for operations
-	setConsumerChan   chan setConsumerChan
-	closeConsumerChan chan closeConsumerChan
+	setConsumerChan    chan setConsumerChan
+	deleteConsumerChan chan deleteConsumerChan
 
 	// chans for msgs
 	producerChan  msg.CapsuleChan
@@ -23,8 +23,8 @@ func NewLight() *Light {
 	return &Light{
 		isRelaying: false,
 
-		setConsumerChan:   make(chan setConsumerChan, 10),
-		closeConsumerChan: make(chan closeConsumerChan, 10),
+		setConsumerChan:    make(chan setConsumerChan, SetConsumerChanBuffSize),
+		deleteConsumerChan: make(chan deleteConsumerChan, DeleteConsumerChanBuffSize),
 
 		producerChan:  make(msg.CapsuleChan, ProducerChanBuffSize),
 		consumerChans: make(map[string]msg.CapsuleChan),
@@ -35,7 +35,7 @@ func (box *Light) GetProducerChan() msg.CapsuleChan {
 	return box.producerChan
 }
 
-func (box *Light) SetConsumerChan(consumerID string) (msg.CapsuleChan, error) {
+func (box *Light) CreateConsumerChan(consumerID string) (msg.CapsuleChan, error) {
 	consumerChan := make(msg.CapsuleChan, ConsumerChanBuffSize)
 	errorChan := make(chan error)
 	defer close(errorChan)
@@ -54,7 +54,7 @@ func (box *Light) SetConsumerChan(consumerID string) (msg.CapsuleChan, error) {
 func (box *Light) CloseConsumerChan(consumerID string) error {
 	errorChan := make(chan error)
 	defer close(errorChan)
-	box.closeConsumerChan <- closeConsumerChan{
+	box.deleteConsumerChan <- deleteConsumerChan{
 		consumerID: consumerID,
 		errorChan:  errorChan,
 	}
@@ -63,9 +63,9 @@ func (box *Light) CloseConsumerChan(consumerID string) error {
 
 func (box *Light) Relay(ctx context.Context) {
 	var (
-		setConsumerChan   setConsumerChan
-		closeConsumerChan closeConsumerChan
-		errorChan         chan error
+		setConsumerChan    setConsumerChan
+		deleteConsumerChan deleteConsumerChan
+		errorChan          chan error
 	)
 	if box.isRelaying {
 		return
@@ -94,10 +94,10 @@ func (box *Light) Relay(ctx context.Context) {
 			box.consumerChans[consumerID] = consumerChan
 			errorChan <- nil
 
-		// handling operation: closeConsumerChan
-		case closeConsumerChan = <-box.closeConsumerChan:
-			consumerID := closeConsumerChan.consumerID
-			errorChan := closeConsumerChan.errorChan
+		// handling operation: deleteConsumerChan
+		case deleteConsumerChan = <-box.deleteConsumerChan:
+			consumerID := deleteConsumerChan.consumerID
+			errorChan := deleteConsumerChan.errorChan
 			consumerChan, exist := box.consumerChans[consumerID]
 			if !exist {
 				errorChan <- fmt.Errorf("failed to find consumer chan for consumer id(%s)", consumerID)
