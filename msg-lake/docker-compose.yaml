@@ -31,6 +31,8 @@ services:
       server:
         condition: service_healthy
     image: h0n9/msg-lake
+    deploy:
+      replicas: 10
     build:
       context: .
     command: ["lab", "test", "-u", "100", "--host", "172.19.0.2:8080"]
