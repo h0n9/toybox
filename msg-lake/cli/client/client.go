@@ -134,6 +134,9 @@ var Cmd = &cobra.Command{
 			for {
 				printInput(false)
 				input, err := reader.ReadString('\n')
+				if err == io.EOF {
+					return
+				}
 				if err != nil {
 					fmt.Println(err)
 					continue
