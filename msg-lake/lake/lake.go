@@ -5,23 +5,26 @@ import (
 	"fmt"
 	"io"
 
-	pb "github.com/h0n9/toybox/msg-lake/proto"
-	"github.com/h0n9/toybox/msg-lake/store"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/h0n9/toybox/msg-lake/msg"
+	"github.com/h0n9/toybox/msg-lake/msg/box"
+	"github.com/h0n9/toybox/msg-lake/msg/center"
+	pb "github.com/h0n9/toybox/msg-lake/proto"
 )
 
 type LakeServer struct {
 	pb.UnimplementedLakeServer
 
-	ctx      context.Context
-	msgStore *store.MsgStoreLight
+	ctx       context.Context
+	msgCenter *center.Light
 }
 
 func NewLakeServer(ctx context.Context) *LakeServer {
 	return &LakeServer{
-		ctx:      ctx,
-		msgStore: store.NewMsgStoreLight(ctx),
+		ctx:       ctx,
+		msgCenter: center.NewLight(ctx),
 	}
 }
 
@@ -32,9 +35,9 @@ func (ls *LakeServer) Close() {
 func (ls *LakeServer) Send(stream pb.Lake_SendServer) error {
 	var (
 		msgBoxID string = ""
-		msgBox   *store.MsgBoxLight
+		msgBox   *box.Light
 
-		producerChan store.MsgCapsuleChan
+		producerChan msg.CapsuleChan
 	)
 	for {
 		req, err := stream.Recv()
@@ -47,7 +50,7 @@ func (ls *LakeServer) Send(stream pb.Lake_SendServer) error {
 		newMsgBoxID := req.GetMsgBoxId()
 		if msgBoxID != newMsgBoxID {
 			msgBoxID = newMsgBoxID
-			msgBox = ls.msgStore.GetMsgBox(msgBoxID)
+			msgBox = ls.msgCenter.GetMsgBox(msgBoxID)
 			producerChan = msgBox.GetProducerChan()
 		}
 		producerChan <- req.GetMsgCapsule()
@@ -58,7 +61,7 @@ func (ls *LakeServer) Recv(req *pb.RecvReq, stream pb.Lake_RecvServer) error {
 	msgBoxID := req.GetMsgBoxId()
 	consumerID := req.GetConsumerId()
 
-	msgBox := ls.msgStore.GetMsgBox(msgBoxID)
+	msgBox := ls.msgCenter.GetMsgBox(msgBoxID)
 	consumerChan, err := msgBox.SetConsumerChan(consumerID)
 	if err != nil {
 		return err

@@ -1,51 +1,13 @@
-package store
+package box
 
 import (
 	"context"
 	"fmt"
-	"sync"
+
+	"github.com/h0n9/toybox/msg-lake/msg"
 )
 
-const (
-	ProducerChanBuffSize = 10000
-	ConsumerChanBuffSize = 100
-)
-
-type MsgStoreLight struct {
-	ctx      context.Context
-	msgBoxes *sync.Map // <msg_box_id>:<msg_box>
-}
-
-func NewMsgStoreLight(ctx context.Context) *MsgStoreLight {
-	return &MsgStoreLight{
-		ctx:      ctx,
-		msgBoxes: &sync.Map{},
-	}
-}
-
-func (store *MsgStoreLight) GetMsgBox(msgBoxID string) *MsgBoxLight {
-	value, exist := store.msgBoxes.Load(msgBoxID)
-	if exist {
-		return value.(*MsgBoxLight)
-	}
-	msgBoxLight := NewMsgBoxLight()
-	store.msgBoxes.Store(msgBoxID, msgBoxLight)
-	go msgBoxLight.Relay(store.ctx)
-	return msgBoxLight
-}
-
-type setConsumerChan struct {
-	consumerID   string
-	consumerChan MsgCapsuleChan
-	errorChan    chan error
-}
-
-type closeConsumerChan struct {
-	consumerID string
-	errorChan  chan error
-}
-
-type MsgBoxLight struct {
+type Light struct {
 	isRelaying bool
 
 	// chans for operations
@@ -53,28 +15,28 @@ type MsgBoxLight struct {
 	closeConsumerChan chan closeConsumerChan
 
 	// chans for msgs
-	producerChan  MsgCapsuleChan
-	consumerChans map[string]MsgCapsuleChan
+	producerChan  msg.CapsuleChan
+	consumerChans map[string]msg.CapsuleChan
 }
 
-func NewMsgBoxLight() *MsgBoxLight {
-	return &MsgBoxLight{
+func NewLight() *Light {
+	return &Light{
 		isRelaying: false,
 
 		setConsumerChan:   make(chan setConsumerChan, 10),
 		closeConsumerChan: make(chan closeConsumerChan, 10),
 
-		producerChan:  make(MsgCapsuleChan, ProducerChanBuffSize),
-		consumerChans: make(map[string]MsgCapsuleChan),
+		producerChan:  make(msg.CapsuleChan, ProducerChanBuffSize),
+		consumerChans: make(map[string]msg.CapsuleChan),
 	}
 }
 
-func (box *MsgBoxLight) GetProducerChan() MsgCapsuleChan {
+func (box *Light) GetProducerChan() msg.CapsuleChan {
 	return box.producerChan
 }
 
-func (box *MsgBoxLight) SetConsumerChan(consumerID string) (MsgCapsuleChan, error) {
-	consumerChan := make(MsgCapsuleChan, ConsumerChanBuffSize)
+func (box *Light) SetConsumerChan(consumerID string) (msg.CapsuleChan, error) {
+	consumerChan := make(msg.CapsuleChan, ConsumerChanBuffSize)
 	errorChan := make(chan error)
 	defer close(errorChan)
 	box.setConsumerChan <- setConsumerChan{
@@ -89,7 +51,7 @@ func (box *MsgBoxLight) SetConsumerChan(consumerID string) (MsgCapsuleChan, erro
 	return consumerChan, nil
 }
 
-func (box *MsgBoxLight) CloseConsumerChan(consumerID string) error {
+func (box *Light) CloseConsumerChan(consumerID string) error {
 	errorChan := make(chan error)
 	defer close(errorChan)
 	box.closeConsumerChan <- closeConsumerChan{
@@ -99,7 +61,7 @@ func (box *MsgBoxLight) CloseConsumerChan(consumerID string) error {
 	return <-errorChan
 }
 
-func (box *MsgBoxLight) Relay(ctx context.Context) {
+func (box *Light) Relay(ctx context.Context) {
 	var (
 		setConsumerChan   setConsumerChan
 		closeConsumerChan closeConsumerChan

@@ -8,6 +8,7 @@ COPY cmd/ cmd/
 COPY cli/ cli/
 COPY proto/ proto/
 COPY store/ store/
+COPY msg/ msg/
 COPY lake/ lake/
 RUN go build ./cmd/msg-lake
 
