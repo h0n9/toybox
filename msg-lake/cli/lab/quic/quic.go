@@ -51,7 +51,7 @@ var Cmd = &cobra.Command{
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			ticker := time.NewTicker(1 * time.Second)
+			ticker := time.NewTicker(10 * time.Millisecond)
 			defer ticker.Stop()
 
 			conn, err := quic.DialAddr("127.0.0.1:8081",
@@ -79,7 +79,7 @@ var Cmd = &cobra.Command{
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					_, err := stream.Write([]byte("hello world\n"))
+					_, err := stream.Write([]byte(fmt.Sprintf("%d\n", time.Now().UnixMilli())))
 					if err != nil {
 						fmt.Println(err)
 					}
