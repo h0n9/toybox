@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/h0n9/toybox/msg-lake/cli/lab/client"
+	"github.com/h0n9/toybox/msg-lake/cli/lab/quic"
 	"github.com/h0n9/toybox/msg-lake/cli/lab/test"
 )
 
@@ -17,5 +18,6 @@ func init() {
 	Cmd.AddCommand(
 		client.Cmd,
 		test.Cmd,
+		quic.Cmd,
 	)
 }
