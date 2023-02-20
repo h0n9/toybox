@@ -48,47 +48,54 @@ var Cmd = &cobra.Command{
 			}
 		}()
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			ticker := time.NewTicker(10 * time.Millisecond)
-			defer ticker.Stop()
-
-			conn, err := quic.DialAddr("127.0.0.1:8081",
-				&tls.Config{
-					InsecureSkipVerify: true,
-					NextProtos:         []string{"msg-lake"},
-				},
-				nil,
-			)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			defer conn.CloseWithError(0, "bye")
-
-			stream, err := conn.OpenStreamSync(ctx)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			defer stream.Close()
-
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-ticker.C:
-					_, err := stream.Write([]byte(fmt.Sprintf("%d\n", time.Now().UnixMilli())))
-					if err != nil {
-						fmt.Println(err)
-					}
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				err := runClient(ctx)
+				if err != nil {
+					fmt.Println(err)
 				}
-			}
-		}()
+			}()
+		}
 
 		wg.Wait()
 
 		return nil
 	},
+}
+
+func runClient(ctx context.Context) error {
+	ticker := time.NewTicker(1 * time.Millisecond)
+	defer ticker.Stop()
+
+	conn, err := quic.DialAddr("127.0.0.1:8081",
+		&tls.Config{
+			InsecureSkipVerify: true,
+			NextProtos:         []string{"msg-lake"},
+		},
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+	defer conn.CloseWithError(0, "bye")
+
+	stream, err := conn.OpenStreamSync(ctx)
+	if err != nil {
+		return err
+	}
+	defer stream.Close()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			_, err := stream.Write([]byte(fmt.Sprintf("%d\n", time.Now().UnixMilli())))
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
 }
