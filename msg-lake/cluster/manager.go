@@ -46,37 +46,36 @@ func (manager *Manager) Run(ctx context.Context) error {
 		}
 		defer conn.CloseWithError(0, "bye")
 
-		wg.Add(1)
-		go func(ctx context.Context, conn quic.Connection) {
-			defer wg.Done()
+		stream, err := conn.AcceptStream(ctx)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
 
-			stream, err := conn.AcceptStream(ctx)
+		wg.Add(1)
+		go func(ctx context.Context, stream quic.Stream) {
+			defer wg.Done()
+			handleStream(ctx, stream)
+		}(ctx, stream)
+	}
+}
+
+func handleStream(ctx context.Context, stream quic.Stream) {
+	defer stream.Close()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			reader := bufio.NewReader(stream)
+			data, err := reader.ReadBytes('\n')
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
-
-			wg.Add(1)
-			go func(stream quic.Stream) {
-				defer wg.Done()
-
-				reader := bufio.NewReader(stream)
-				for {
-					select {
-					case <-ctx.Done():
-						stream.Close()
-						return
-					default:
-						data, err := reader.ReadBytes('\n')
-						if err != nil {
-							fmt.Println(err)
-							return
-						}
-						fmt.Printf("%s", data)
-					}
-				}
-			}(stream)
-		}(ctx, conn)
+			fmt.Printf("%s", data)
+		}
 	}
 }
 
