@@ -86,29 +86,16 @@ func NewRelayer(ctx context.Context, hostname string, port int) (*Relayer, error
 
 func (relayer *Relayer) DiscoverPeers() error {
 	for {
-		fmt.Println("waiting")
+		fmt.Println("waiting peers ...")
 		peer := <-relayer.peerChan // blocks until discover new peers
-		fmt.Printf("found peer: %s ... connecting\n", peer.ID)
+		fmt.Printf("found peer: %s\n", peer.ID)
 
+		fmt.Printf("connecting peer: %s\n", peer.ID)
 		err := relayer.h.Connect(relayer.ctx, peer)
 		if err != nil {
-			fmt.Printf("failed to connect to %s\n", peer.ID)
+			fmt.Printf("failed to connect peer: %s\n", peer.ID)
 			continue
 		}
-
-		stream, err := relayer.h.NewStream(relayer.ctx, peer.ID, protocolID)
-		if err != nil {
-			fmt.Printf("failed to open stream with %s\n", peer.ID)
-			continue
-		}
-
-		rw := bufio.NewReadWriter(
-			bufio.NewReader(stream),
-			bufio.NewWriter(stream),
-		)
-
-		go readData(rw)
-		go writeData(relayer.h.ID().String(), rw)
 
 		fmt.Printf("connected to peer: %s\n", peer.ID)
 	}
@@ -122,11 +109,11 @@ func handleStream(s network.Stream) {
 		bufio.NewWriter(s),
 	)
 
-	go readData(rw)
+	go readData(s.ID(), rw)
 	go writeData(s.ID(), rw)
 }
 
-func readData(rw *bufio.ReadWriter) {
+func readData(id string, rw *bufio.ReadWriter) {
 	for {
 		str, err := rw.ReadString('\n')
 		if err != nil {
