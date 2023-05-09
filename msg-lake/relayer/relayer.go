@@ -128,7 +128,7 @@ func readData(id string, rw *bufio.ReadWriter) {
 		str, err := rw.ReadString('\n')
 		if err != nil {
 			fmt.Println("Error reading from buffer")
-			panic(err)
+			break
 		}
 
 		if str == "" {
@@ -148,12 +148,12 @@ func writeData(id string, rw *bufio.ReadWriter) {
 		_, err := rw.WriteString(data)
 		if err != nil {
 			fmt.Println("Error writing to buffer")
-			panic(err)
+			break
 		}
 		err = rw.Flush()
 		if err != nil {
 			fmt.Println("Error flushing buffer")
-			panic(err)
+			break
 		}
 		time.Sleep(1 * time.Second)
 	}
