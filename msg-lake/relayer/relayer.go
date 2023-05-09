@@ -99,20 +99,28 @@ func (relayer *Relayer) DiscoverPeers() error {
 			continue
 		}
 
+		stream, err := relayer.h.NewStream(relayer.ctx, peer.ID, protocolID)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		rw := bufio.NewReadWriter(
+			bufio.NewReader(stream),
+			bufio.NewWriter(stream),
+		)
+		go writeData(relayer.h.ID().String(), rw)
+
 		fmt.Printf("connected to peer: %s\n", peer)
 	}
 }
 
 func handleStream(s network.Stream) {
 	fmt.Println("got a new stream")
-
 	rw := bufio.NewReadWriter(
 		bufio.NewReader(s),
 		bufio.NewWriter(s),
 	)
-
 	go readData(s.ID(), rw)
-	go writeData(s.ID(), rw)
 }
 
 func readData(id string, rw *bufio.ReadWriter) {
