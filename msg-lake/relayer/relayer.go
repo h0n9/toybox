@@ -14,6 +14,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
+	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 
 	"github.com/multiformats/go-multiaddr"
 )
@@ -42,7 +43,7 @@ func NewRelayer(ctx context.Context, hostname string, port int) (*Relayer, error
 
 	ma, err := multiaddr.NewMultiaddr(
 		fmt.Sprintf(
-			"/ip4/%s/tcp/%d",
+			"/ip4/%s/udp/%d/quic",
 			hostname,
 			port,
 		),
@@ -56,6 +57,7 @@ func NewRelayer(ctx context.Context, hostname string, port int) (*Relayer, error
 	h, err := libp2p.New(
 		libp2p.ListenAddrs(ma),
 		libp2p.Identity(privKey),
+		libp2p.Transport(libp2pquic.NewTransport),
 	)
 	if err != nil {
 		return nil, err
