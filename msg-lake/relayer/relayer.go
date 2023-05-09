@@ -52,8 +52,6 @@ func NewRelayer(ctx context.Context, hostname string, port int) (*Relayer, error
 		return nil, err
 	}
 
-	fmt.Println(ma)
-
 	h, err := libp2p.New(
 		libp2p.ListenAddrs(ma),
 		libp2p.Identity(privKey),
@@ -74,6 +72,8 @@ func NewRelayer(ctx context.Context, hostname string, port int) (*Relayer, error
 		return nil, err
 	}
 
+	fmt.Printf("listening on: %s\n", ma)
+
 	return &Relayer{
 		ctx: ctx,
 
@@ -90,16 +90,16 @@ func (relayer *Relayer) DiscoverPeers() error {
 	for {
 		fmt.Println("waiting peers ...")
 		peer := <-relayer.peerChan // blocks until discover new peers
-		fmt.Printf("found peer: %s\n", peer.ID)
+		fmt.Printf("found peer: %s\n", peer)
 
-		fmt.Printf("connecting peer: %s\n", peer.ID)
+		fmt.Printf("connecting peer: %s\n", peer)
 		err := relayer.h.Connect(relayer.ctx, peer)
 		if err != nil {
-			fmt.Printf("failed to connect peer: %s\n", peer.ID)
+			fmt.Printf("failed to connect peer: %s\n", peer)
 			continue
 		}
 
-		fmt.Printf("connected to peer: %s\n", peer.ID)
+		fmt.Printf("connected to peer: %s\n", peer)
 	}
 }
 
