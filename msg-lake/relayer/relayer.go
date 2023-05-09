@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	protocolID = protocol.ID("/msg-lake/v1.0-beta-0")
-	rendezVous = "lifeisbeautiful"
+	protocolID      = protocol.ID("/msg-lake/v1.0-beta-0")
+	mdnsServiceName = "_p2p_msg-lake._udp"
 )
 
 type Relayer struct {
@@ -66,7 +66,7 @@ func NewRelayer(ctx context.Context, hostname string, port int) (*Relayer, error
 
 	// init mdns service
 	dn := newDiscoveryNotifee()
-	svc := mdns.NewMdnsService(h, rendezVous, dn)
+	svc := mdns.NewMdnsService(h, mdnsServiceName, dn)
 	err = svc.Start()
 	if err != nil {
 		return nil, err
