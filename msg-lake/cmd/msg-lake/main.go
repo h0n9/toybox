@@ -10,7 +10,7 @@ import (
 func main() {
 	ctx := context.Background()
 	port := rand.Intn(8080-1000+1) + 1000
-	relayer, err := relayer.NewRelayer(ctx, "127.0.0.1", port)
+	relayer, err := relayer.NewRelayer(ctx, "0.0.0.0", port)
 	if err != nil {
 		panic(err)
 	}
