@@ -41,22 +41,7 @@ func NewRelayer(ctx context.Context, hostname string, port int) (*Relayer, error
 		return nil, err
 	}
 
-	ma, err := multiaddr.NewMultiaddr(
-		fmt.Sprintf(
-			"/ip4/%s/udp/%d/quic",
-			hostname,
-			port,
-		),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	h, err := libp2p.New(
-		libp2p.ListenAddrs(ma),
-		libp2p.Identity(privKey),
-		libp2p.Transport(libp2pquic.NewTransport),
-	)
+	h, err := newHost(hostname, port, privKey)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +57,7 @@ func NewRelayer(ctx context.Context, hostname string, port int) (*Relayer, error
 		return nil, err
 	}
 
-	fmt.Printf("listening on: %s\n", ma)
+	fmt.Printf("listening on: %v\n", h.Addrs())
 
 	return &Relayer{
 		ctx: ctx,
@@ -176,4 +161,22 @@ func newDiscoveryNotifee() *discoveryNotifee {
 // interface to be called when new  peer is found
 func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 	n.peerChan <- pi
+}
+
+func newHost(hostname string, port int, privKey crypto.PrivKey) (host.Host, error) {
+	ma, err := multiaddr.NewMultiaddr(
+		fmt.Sprintf(
+			"/ip4/%s/udp/%d/quic",
+			hostname,
+			port,
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return libp2p.New(
+		libp2p.ListenAddrs(ma),
+		libp2p.Identity(privKey),
+		libp2p.Transport(libp2pquic.NewTransport),
+	)
 }
