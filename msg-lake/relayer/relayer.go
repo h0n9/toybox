@@ -86,6 +86,10 @@ func NewRelayer(ctx context.Context, hostname string, port int) (*Relayer, error
 	}, nil
 }
 
+func (relayer *Relayer) Close() error {
+	return relayer.h.Close()
+}
+
 func (relayer *Relayer) DiscoverPeers() error {
 	for {
 		fmt.Println("waiting peers ...")
