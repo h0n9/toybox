@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+import "proto/msg.proto";
+
+option go_package = "github.com/h0n9/toybox/msg-lake/proto";
+
+service Lake {
+  rpc PubSub(stream PubSubReq) returns (PubSubRes);
+}
+
+message PubSubReq {
+  PubSubReqType type = 1;
+  string topic_id = 2;
+  MsgCapsule msg_capsule = 3;
+}
+
+enum PubSubReqType {
+  PUBSUB_REQ_PUBLISH = 0;
+  PUBSUB_REQ_SUBSCRIBE = 1;
+}
+
+message PubSubRes {
+  PubSubResType type = 1;
+  bool ok = 2;
+  string topic_id = 3;
+  MsgCapsule msg_capsule = 4;
+}
+
+enum PubSubResType {
+  PUBSUB_RES_PUBLISH = 0;
+  PUBSUB_RES_SUBSCRIBE = 1;
+}
