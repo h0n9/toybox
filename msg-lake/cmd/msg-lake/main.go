@@ -1,37 +1,16 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"net"
+	"os"
 
-	"google.golang.org/grpc"
-
-	"github.com/h0n9/toybox/msg-lake/lake"
-	pb "github.com/h0n9/toybox/msg-lake/proto"
+	"github.com/h0n9/toybox/msg-lake/cli"
 )
 
 func main() {
-	ctx := context.Background()
-
-	grpcServer := grpc.NewServer()
-	lakeService, err := lake.NewLakeService(ctx)
+	err := cli.RootCmd.Execute()
 	if err != nil {
 		fmt.Println(err)
-		return
-	}
-
-	pb.RegisterLakeServer(grpcServer, lakeService)
-
-	listener, err := net.Listen("tcp", "0.0.0.0:8080")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	err = grpcServer.Serve(listener)
-	if err != nil {
-		fmt.Println(err)
-		return
+		os.Exit(1)
 	}
 }
