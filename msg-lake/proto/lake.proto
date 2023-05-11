@@ -5,7 +5,7 @@ import "proto/msg.proto";
 option go_package = "github.com/h0n9/toybox/msg-lake/proto";
 
 service Lake {
-  rpc PubSub(stream PubSubReq) returns (PubSubRes);
+  rpc PubSub(stream PubSubReq) returns (stream PubSubRes);
 }
 
 message PubSubReq {
@@ -15,8 +15,9 @@ message PubSubReq {
 }
 
 enum PubSubReqType {
-  PUBSUB_REQ_PUBLISH = 0;
-  PUBSUB_REQ_SUBSCRIBE = 1;
+  PUB_SUB_REQ_TYPE_UNSPECIFIED = 0;
+  PUB_SUB_REQ_TYPE_PUBLISH = 1;
+  PUB_SUB_REQ_TYPE_SUBSCRIBE = 2;
 }
 
 message PubSubRes {
@@ -27,6 +28,7 @@ message PubSubRes {
 }
 
 enum PubSubResType {
-  PUBSUB_RES_PUBLISH = 0;
-  PUBSUB_RES_SUBSCRIBE = 1;
+  PUB_SUB_RES_TYPE_UNSPECIFIED = 0;
+  PUB_SUB_RES_TYPE_PUBLISH = 1;
+  PUB_SUB_RES_TYPE_SUBSCRIBE = 2;
 }
