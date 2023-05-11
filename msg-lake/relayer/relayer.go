@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -103,8 +104,16 @@ func (relayer *Relayer) DiscoverPeers() error {
 	}
 }
 
+func (relayer *Relayer) NewPubSub() (*pubsub.PubSub, error) {
+	return pubsub.NewGossipSub(relayer.ctx, relayer.h)
+}
+
 func (relayer *Relayer) NewSubHost(port int) (host.Host, error) {
-	h, err := newHost("127.0.0.1", port, relayer.privKey)
+	privKey, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	h, err := newHost("127.0.0.1", port, privKey)
 	if err != nil {
 		return nil, err
 	}
@@ -115,6 +124,7 @@ func (relayer *Relayer) NewSubHost(port int) (host.Host, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(h.Peerstore().Peers())
 	return h, nil
 }
 
