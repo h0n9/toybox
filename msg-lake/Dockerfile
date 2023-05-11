@@ -4,6 +4,8 @@ WORKDIR /usr/src/app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY cmd/ cmd/
+COPY proto/ proto/
+COPY lake/ lake/
 COPY relayer/ relayer/
 RUN go build ./cmd/msg-lake
 
