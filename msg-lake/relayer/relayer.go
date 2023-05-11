@@ -47,7 +47,7 @@ func NewRelayer(ctx context.Context, hostname string, port int) (*Relayer, error
 	}
 
 	// register stream handler
-	h.SetStreamHandler(protocolID, handleStream)
+	// h.SetStreamHandler(protocolID, handleStream)
 
 	// init mdns service
 	dn := newDiscoveryNotifee()
@@ -88,19 +88,34 @@ func (relayer *Relayer) DiscoverPeers() error {
 			continue
 		}
 
-		stream, err := relayer.h.NewStream(relayer.ctx, peer.ID, protocolID)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		rw := bufio.NewReadWriter(
-			bufio.NewReader(stream),
-			bufio.NewWriter(stream),
-		)
-		go writeData(relayer.h.ID().String(), rw)
+		// stream, err := relayer.h.NewStream(relayer.ctx, peer.ID, protocolID)
+		// if err != nil {
+		// 	fmt.Println(err)
+		// 	continue
+		// }
+		// rw := bufio.NewReadWriter(
+		// 	bufio.NewReader(stream),
+		// 	bufio.NewWriter(stream),
+		// )
+		// go writeData(relayer.h.ID().String(), rw)
 
 		fmt.Printf("connected to peer: %s\n", peer)
 	}
+}
+
+func (relayer *Relayer) NewSubHost(port int) (host.Host, error) {
+	h, err := newHost("127.0.0.1", port, relayer.privKey)
+	if err != nil {
+		return nil, err
+	}
+	err = h.Connect(relayer.ctx, peer.AddrInfo{
+		ID:    relayer.h.ID(),
+		Addrs: relayer.h.Addrs(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return h, nil
 }
 
 func handleStream(s network.Stream) {
