@@ -2,7 +2,6 @@ package msg
 
 import (
 	"context"
-	"fmt"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
@@ -38,29 +37,4 @@ func (center *Center) GetBox(topicID string) (*Box, error) {
 		center.boxes[topicID] = box
 	}
 	return box, nil
-}
-
-func (center *Center) Join(topicID, subscriberID string) (SubscribeCh, error) {
-	box, exist := center.boxes[topicID]
-	if !exist {
-		topic, err := center.ps.Join(topicID)
-		if err != nil {
-			return nil, err
-		}
-		newBox, err := NewBox(center.ctx, topicID, topic)
-		if err != nil {
-			return nil, err
-		}
-		box = newBox
-		center.boxes[topicID] = box
-	}
-	return box.Subscribe(subscriberID)
-}
-
-func (center *Center) Leave(topicID, subscriberID string) error {
-	box, exist := center.boxes[topicID]
-	if !exist {
-		return fmt.Errorf("topic '%s' doesn't exist", topicID)
-	}
-	return box.StopSubscription(subscriberID)
 }
