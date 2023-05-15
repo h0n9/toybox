@@ -11,7 +11,8 @@ service Lake {
 message PubSubReq {
   PubSubReqType type = 1;
   string topic_id = 2;
-  MsgCapsule msg_capsule = 3;
+  string subscriber_id = 3;
+  MsgCapsule msg_capsule = 4;
 }
 
 enum PubSubReqType {
