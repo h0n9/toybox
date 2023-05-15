@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/h0n9/toybox/msg-lake/msg"
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -31,7 +32,8 @@ type Relayer struct {
 	privKey crypto.PrivKey
 	pubKey  crypto.PubKey
 
-	h host.Host
+	h         host.Host
+	msgCenter *msg.Center
 
 	peerChan <-chan peer.AddrInfo
 }
@@ -60,13 +62,19 @@ func NewRelayer(ctx context.Context, hostname string, port int) (*Relayer, error
 
 	fmt.Printf("listening on: %v\n", h.Addrs())
 
+	ps, err := pubsub.NewGossipSub(ctx, h)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Relayer{
 		ctx: ctx,
 
 		privKey: privKey,
 		pubKey:  pubKey,
 
-		h: h,
+		h:         h,
+		msgCenter: msg.NewCenter(ctx, ps),
 
 		peerChan: dn.peerChan,
 	}, nil
@@ -104,28 +112,8 @@ func (relayer *Relayer) DiscoverPeers() error {
 	}
 }
 
-func (relayer *Relayer) NewPubSub() (*pubsub.PubSub, error) {
-	return pubsub.NewGossipSub(relayer.ctx, relayer.h)
-}
-
-func (relayer *Relayer) NewSubHost(port int) (host.Host, error) {
-	privKey, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-	h, err := newHost("127.0.0.1", port, privKey)
-	if err != nil {
-		return nil, err
-	}
-	err = h.Connect(relayer.ctx, peer.AddrInfo{
-		ID:    relayer.h.ID(),
-		Addrs: relayer.h.Addrs(),
-	})
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println(h.Peerstore().Peers())
-	return h, nil
+func (relayer *Relayer) GetMsgCenter() *msg.Center {
+	return relayer.msgCenter
 }
 
 func handleStream(s network.Stream) {

@@ -3,15 +3,13 @@ package lake
 import (
 	"context"
 	"fmt"
-	"io"
-	"math/rand"
 	"sync"
 
 	"google.golang.org/protobuf/proto"
 
+	"github.com/h0n9/toybox/msg-lake/msg"
 	pb "github.com/h0n9/toybox/msg-lake/proto"
 	"github.com/h0n9/toybox/msg-lake/relayer"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
 
 type LakeService struct {
@@ -43,25 +41,18 @@ func (lakeService *LakeService) Close() error {
 
 func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 	wg := sync.WaitGroup{}
-	defer wg.Wait()
 
-	resCh := make(chan pb.PubSubRes)
+	var (
+		resCh chan pb.PubSubRes = make(chan pb.PubSubRes)
 
-	port := rand.Intn(8080-1000+1) + 1000
-	h, err := lakeService.relayer.NewSubHost(port)
-	if err != nil {
-		return err
-	}
-	ps, err := pubsub.NewGossipSub(stream.Context(), h)
-	if err != nil {
-		return err
-	}
-	tm := NewTopicManager(stream.Context(), ps, resCh)
-	defer func() {
-		tm.Close()
-		h.Close()
-		wg.Wait()
-	}()
+		msgSubscriberID string
+		msgSubscribeCh  msg.SubscribeCh
+
+		msgBoxes map[string]*msg.Box = make(map[string]*msg.Box)
+	)
+	defer close(resCh)
+
+	msgCenter := lakeService.relayer.GetMsgCenter()
 
 	// req stream handler
 	wg.Add(1)
@@ -70,23 +61,31 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 
 		for {
 			pubSubReq, err := stream.Recv()
-			if err == io.EOF {
-				return
-			}
 			if err != nil {
-				fmt.Println(err)
+				fmt.Println("leave all msg boxes")
+				for _, msgBox := range msgBoxes {
+					err = msgBox.StopSubscription(msgSubscriberID)
+					if err != nil {
+						fmt.Println(err)
+					}
+				}
 				return
 			}
 
 			switch pubSubReq.Type {
 			case pb.PubSubReqType_PUB_SUB_REQ_TYPE_PUBLISH:
-				topic, err := tm.Join(pubSubReq.TopicId)
-				if err != nil {
-					resCh <- pb.PubSubRes{
-						Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
-						Ok:   false,
+				msgBox, exist := msgBoxes[pubSubReq.TopicId]
+				if !exist {
+					newMsgBox, err := msgCenter.GetBox(pubSubReq.TopicId)
+					if err != nil {
+						resCh <- pb.PubSubRes{
+							Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
+							Ok:   false,
+						}
+						continue
 					}
-					continue
+					msgBox = newMsgBox
+					msgBoxes[pubSubReq.TopicId] = msgBox
 				}
 				data, err := proto.Marshal(pubSubReq.GetMsgCapsule())
 				if err != nil {
@@ -96,7 +95,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 					}
 					continue
 				}
-				err = topic.Publish(stream.Context(), data)
+				err = msgBox.Publish(data)
 				if err != nil {
 					resCh <- pb.PubSubRes{
 						Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
@@ -109,7 +108,20 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 					Ok:   true,
 				}
 			case pb.PubSubReqType_PUB_SUB_REQ_TYPE_SUBSCRIBE:
-				_, err = tm.Join(pubSubReq.TopicId)
+				msgBox, exist := msgBoxes[pubSubReq.TopicId]
+				if !exist {
+					newMsgBox, err := msgCenter.GetBox(pubSubReq.TopicId)
+					if err != nil {
+						resCh <- pb.PubSubRes{
+							Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
+							Ok:   false,
+						}
+						continue
+					}
+					msgBox = newMsgBox
+					msgBoxes[pubSubReq.TopicId] = msgBox
+				}
+				msgSubscribeCh, err = msgBox.Subscribe(pubSubReq.GetSubscriberId())
 				if err != nil {
 					resCh <- pb.PubSubRes{
 						Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
@@ -117,6 +129,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 					}
 					continue
 				}
+				msgSubscriberID = pubSubReq.GetSubscriberId()
 				resCh <- pb.PubSubRes{
 					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
 					Ok:   true,
@@ -131,16 +144,34 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 		defer wg.Done()
 
 		for {
+			select {
 			// receive res msgs from channel and send
-			res := <-resCh
-			fmt.Println(res)
-			err := stream.Send(&res)
-			if err != nil {
-				fmt.Println(err)
-				continue
+			case res := <-resCh:
+				err := stream.Send(&res)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+			case data := <-msgSubscribeCh:
+				msgCapsule := pb.MsgCapsule{}
+				err := proto.Unmarshal(data, &msgCapsule)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+				err = stream.Send(&pb.PubSubRes{
+					Type:       pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
+					MsgCapsule: &msgCapsule,
+				})
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
 			}
 		}
 	}()
+
+	wg.Wait()
 
 	return nil
 }
