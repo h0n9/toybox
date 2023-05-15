@@ -43,7 +43,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 	wg := sync.WaitGroup{}
 
 	var (
-		resCh chan pb.PubSubRes = make(chan pb.PubSubRes)
+		resCh chan *pb.PubSubRes = make(chan *pb.PubSubRes)
 
 		msgSubscriberID string
 		msgSubscribeCh  msg.SubscribeCh
@@ -78,7 +78,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 				if !exist {
 					newMsgBox, err := msgCenter.GetBox(pubSubReq.TopicId)
 					if err != nil {
-						resCh <- pb.PubSubRes{
+						resCh <- &pb.PubSubRes{
 							Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
 							Ok:   false,
 						}
@@ -89,7 +89,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 				}
 				data, err := proto.Marshal(pubSubReq.GetMsgCapsule())
 				if err != nil {
-					resCh <- pb.PubSubRes{
+					resCh <- &pb.PubSubRes{
 						Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
 						Ok:   false,
 					}
@@ -97,13 +97,13 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 				}
 				err = msgBox.Publish(data)
 				if err != nil {
-					resCh <- pb.PubSubRes{
+					resCh <- &pb.PubSubRes{
 						Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
 						Ok:   false,
 					}
 					continue
 				}
-				resCh <- pb.PubSubRes{
+				resCh <- &pb.PubSubRes{
 					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
 					Ok:   true,
 				}
@@ -112,7 +112,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 				if !exist {
 					newMsgBox, err := msgCenter.GetBox(pubSubReq.TopicId)
 					if err != nil {
-						resCh <- pb.PubSubRes{
+						resCh <- &pb.PubSubRes{
 							Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
 							Ok:   false,
 						}
@@ -123,14 +123,14 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 				}
 				msgSubscribeCh, err = msgBox.Subscribe(pubSubReq.GetSubscriberId())
 				if err != nil {
-					resCh <- pb.PubSubRes{
+					resCh <- &pb.PubSubRes{
 						Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
 						Ok:   false,
 					}
 					continue
 				}
 				msgSubscriberID = pubSubReq.GetSubscriberId()
-				resCh <- pb.PubSubRes{
+				resCh <- &pb.PubSubRes{
 					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
 					Ok:   true,
 				}
@@ -147,7 +147,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 			select {
 			// receive res msgs from channel and send
 			case res := <-resCh:
-				err := stream.Send(&res)
+				err := stream.Send(res)
 				if err != nil {
 					fmt.Println(err)
 					continue
