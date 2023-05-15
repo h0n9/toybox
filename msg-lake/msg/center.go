@@ -23,6 +23,23 @@ func NewCenter(ctx context.Context, ps *pubsub.PubSub) *Center {
 	}
 }
 
+func (center *Center) GetBox(topicID string) (*Box, error) {
+	box, exist := center.boxes[topicID]
+	if !exist {
+		topic, err := center.ps.Join(topicID)
+		if err != nil {
+			return nil, err
+		}
+		newBox, err := NewBox(center.ctx, topicID, topic)
+		if err != nil {
+			return nil, err
+		}
+		box = newBox
+		center.boxes[topicID] = box
+	}
+	return box, nil
+}
+
 func (center *Center) Join(topicID, subscriberID string) (SubscribeCh, error) {
 	box, exist := center.boxes[topicID]
 	if !exist {
