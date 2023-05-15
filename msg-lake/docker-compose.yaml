@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  agent:
+    build:
+      context: .
+    image: ghcr.io/h0n9/msg-lake
+    ports:
+     - "8080-8089:8080"
+    command: ["agent"]
+    deploy:
+      replicas: 10
+    networks:
+      - msg-lake
+
+networks:
+  msg-lake:
+    ipam:
+      driver: default
+      config:
+       - subnet: 172.19.0.0/16
