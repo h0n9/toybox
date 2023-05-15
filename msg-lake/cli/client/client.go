@@ -91,6 +91,17 @@ var Cmd = &cobra.Command{
 			return err
 		}
 
+		// request subscription
+		err = stream.Send(&pb.PubSubReq{
+			Type:         pb.PubSubReqType_PUB_SUB_REQ_TYPE_SUBSCRIBE,
+			TopicId:      "test",
+			SubscriberId: nickname,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println("request subscription")
+
 		// execute goroutine (receiver)
 		wg.Add(1)
 		go func() {
