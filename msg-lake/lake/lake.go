@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	"google.golang.org/protobuf/proto"
-
 	"github.com/h0n9/toybox/msg-lake/msg"
 	pb "github.com/h0n9/toybox/msg-lake/proto"
 	"github.com/h0n9/toybox/msg-lake/relayer"
@@ -87,15 +85,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 					msgBox = newMsgBox
 					msgBoxes[pubSubReq.TopicId] = msgBox
 				}
-				data, err := proto.Marshal(pubSubReq.GetMsgCapsule())
-				if err != nil {
-					resCh <- &pb.PubSubRes{
-						Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
-						Ok:   false,
-					}
-					continue
-				}
-				err = msgBox.Publish(data)
+				err = msgBox.Publish(pubSubReq.GetData())
 				if err != nil {
 					resCh <- &pb.PubSubRes{
 						Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
@@ -153,15 +143,9 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 					continue
 				}
 			case data := <-msgSubscribeCh:
-				msgCapsule := pb.MsgCapsule{}
-				err := proto.Unmarshal(data, &msgCapsule)
-				if err != nil {
-					fmt.Println(err)
-					continue
-				}
-				err = stream.Send(&pb.PubSubRes{
-					Type:       pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
-					MsgCapsule: &msgCapsule,
+				err := stream.Send(&pb.PubSubRes{
+					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
+					Data: data,
 				})
 				if err != nil {
 					fmt.Println(err)

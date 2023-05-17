@@ -107,16 +107,23 @@ var Cmd = &cobra.Command{
 		go func() {
 			defer wg.Done()
 			for {
-				data, err := stream.Recv()
+				msg, err := stream.Recv()
 				if err != nil {
 					fmt.Println(err)
 					sigCh <- syscall.SIGINT
 					break
 				}
-				if data.GetType() == pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH {
+				if msg.GetType() == pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH {
 					continue
 				}
-				msgCapsule := data.GetMsgCapsule()
+				data := msg.GetData()
+				msgCapsule := pb.MsgCapsule{}
+				err = proto.Unmarshal(data, &msgCapsule)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+
 				signature := msgCapsule.GetSignature()
 				if bytes.Equal(signature.GetPubKey(), pubKeyBytes) {
 					continue
@@ -159,17 +166,23 @@ var Cmd = &cobra.Command{
 					fmt.Println(err)
 					continue
 				}
+				msgCapsule := pb.MsgCapsule{
+					Msg: msg,
+					Signature: &pb.Signature{
+						PubKey:   pubKeyBytes,
+						SigBytes: sigBytes,
+					},
+				}
+				data, err = proto.Marshal(&msgCapsule)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
 
 				err = stream.Send(&pb.PubSubReq{
 					Type:    pb.PubSubReqType_PUB_SUB_REQ_TYPE_PUBLISH,
 					TopicId: "test",
-					MsgCapsule: &pb.MsgCapsule{
-						Msg: msg,
-						Signature: &pb.Signature{
-							PubKey:   pubKeyBytes,
-							SigBytes: sigBytes,
-						},
-					},
+					Data:    data,
 				})
 				if err == io.EOF {
 					err := stream.CloseSend()
