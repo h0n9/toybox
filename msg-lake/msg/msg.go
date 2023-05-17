@@ -1,21 +1,21 @@
 package msg
 
-type SubscribeCh chan []byte
+type SubscriberCh chan []byte
 
-type setSubscribe struct {
+type setSubscriber struct {
 	subscriberID string
-	subscribeCh  SubscribeCh
+	subscriberCh SubscriberCh
 
 	errCh chan error
 }
 
-type deleteSubscribe struct {
+type deleteSubscriber struct {
 	subscriberID string
 
 	errCh chan error
 }
 
 type (
-	setSubscribeCh    chan setSubscribe
-	deleteSubscribeCh chan deleteSubscribe
+	setSubscriberCh    chan setSubscriber
+	deleteSubscriberCh chan deleteSubscriber
 )

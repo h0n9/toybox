@@ -16,12 +16,12 @@ type Box struct {
 	topic   *pubsub.Topic
 
 	// chans for operations
-	setSubscribeCh    setSubscribeCh
-	deleteSubscribeCh deleteSubscribeCh
+	setSubscriberCh    setSubscriberCh
+	deleteSubscriberCh deleteSubscriberCh
 
-	msgSubscribeCh SubscribeCh
-	subscription   *pubsub.Subscription
-	subscribers    map[string]SubscribeCh
+	subscriberCh SubscriberCh
+	subscription *pubsub.Subscription
+	subscribers  map[string]SubscriberCh
 }
 
 func NewBox(ctx context.Context, topicID string, topic *pubsub.Topic) (*Box, error) {
@@ -36,44 +36,44 @@ func NewBox(ctx context.Context, topicID string, topic *pubsub.Topic) (*Box, err
 		topicID: topicID,
 		topic:   topic,
 
-		setSubscribeCh:    make(setSubscribeCh),
-		deleteSubscribeCh: make(deleteSubscribeCh),
+		setSubscriberCh:    make(setSubscriberCh),
+		deleteSubscriberCh: make(deleteSubscriberCh),
 
-		msgSubscribeCh: make(SubscribeCh),
-		subscription:   subscription,
-		subscribers:    make(map[string]SubscribeCh),
+		subscriberCh: make(SubscriberCh),
+		subscription: subscription,
+		subscribers:  make(map[string]SubscriberCh),
 	}
 	box.wg.Add(1)
 	go func() {
 		defer box.wg.Done()
 		var (
-			msgSubscribe []byte
+			msg []byte
 
-			setSubscribe    setSubscribe
-			deleteSubscribe deleteSubscribe
+			setSubscriber    setSubscriber
+			deleteSubscriber deleteSubscriber
 		)
 		for {
 			select {
-			case msgSubscribe = <-box.msgSubscribeCh:
-				for _, subscribeCh := range box.subscribers {
-					subscribeCh <- msgSubscribe
+			case msg = <-box.subscriberCh:
+				for _, subscriberCh := range box.subscribers {
+					subscriberCh <- msg
 				}
-			case setSubscribe = <-box.setSubscribeCh:
-				_, exist := box.subscribers[setSubscribe.subscriberID]
+			case setSubscriber = <-box.setSubscriberCh:
+				_, exist := box.subscribers[setSubscriber.subscriberID]
 				if exist {
-					setSubscribe.errCh <- fmt.Errorf("%s is already subscribing", setSubscribe.subscriberID)
+					setSubscriber.errCh <- fmt.Errorf("%s is already subscribing", setSubscriber.subscriberID)
 					continue
 				}
-				box.subscribers[setSubscribe.subscriberID] = setSubscribe.subscribeCh
-				setSubscribe.errCh <- nil
-			case deleteSubscribe = <-box.deleteSubscribeCh:
-				_, exist := box.subscribers[deleteSubscribe.subscriberID]
+				box.subscribers[setSubscriber.subscriberID] = setSubscriber.subscriberCh
+				setSubscriber.errCh <- nil
+			case deleteSubscriber = <-box.deleteSubscriberCh:
+				_, exist := box.subscribers[deleteSubscriber.subscriberID]
 				if !exist {
-					deleteSubscribe.errCh <- fmt.Errorf("%s is not subscribing", <-deleteSubscribe.errCh)
+					deleteSubscriber.errCh <- fmt.Errorf("%s is not subscribing", <-deleteSubscriber.errCh)
 					continue
 				}
-				delete(box.subscribers, deleteSubscribe.subscriberID)
-				deleteSubscribe.errCh <- nil
+				delete(box.subscribers, deleteSubscriber.subscriberID)
+				deleteSubscriber.errCh <- nil
 			}
 		}
 	}()
@@ -88,7 +88,7 @@ func NewBox(ctx context.Context, topicID string, topic *pubsub.Topic) (*Box, err
 				fmt.Println(err)
 				return
 			}
-			box.msgSubscribeCh <- msg.GetData()
+			box.subscriberCh <- msg.GetData()
 		}
 	}()
 	return &box, nil
@@ -98,26 +98,26 @@ func (box *Box) Publish(data []byte) error {
 	return box.topic.Publish(box.ctx, data)
 }
 
-func (box *Box) Subscribe(subscriberID string) (SubscribeCh, error) {
+func (box *Box) Subscribe(subscriberID string) (SubscriberCh, error) {
 	var (
-		subscribeCh = make(SubscribeCh)
-		errCh       = make(chan error)
+		subscriberCh = make(SubscriberCh)
+		errCh        = make(chan error)
 	)
 	defer close(errCh)
 
-	box.setSubscribeCh <- setSubscribe{
+	box.setSubscriberCh <- setSubscriber{
 		subscriberID: subscriberID,
-		subscribeCh:  subscribeCh,
+		subscriberCh: subscriberCh,
 
 		errCh: errCh,
 	}
 	err := <-errCh
 	if err != nil {
-		close(subscribeCh)
+		close(subscriberCh)
 		return nil, err
 	}
 
-	return subscribeCh, nil
+	return subscriberCh, nil
 }
 
 func (box *Box) StopSubscription(subscriberID string) error {
@@ -126,7 +126,7 @@ func (box *Box) StopSubscription(subscriberID string) error {
 	)
 	defer close(errCh)
 
-	box.deleteSubscribeCh <- deleteSubscribe{
+	box.deleteSubscriberCh <- deleteSubscriber{
 		subscriberID: subscriberID,
 
 		errCh: errCh,

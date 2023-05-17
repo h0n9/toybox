@@ -44,7 +44,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 		resCh chan *pb.PubSubRes = make(chan *pb.PubSubRes)
 
 		msgSubscriberID string
-		msgSubscribeCh  msg.SubscribeCh
+		msgSubscriberCh msg.SubscriberCh
 
 		msgBoxes map[string]*msg.Box = make(map[string]*msg.Box)
 	)
@@ -111,7 +111,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 					msgBox = newMsgBox
 					msgBoxes[pubSubReq.TopicId] = msgBox
 				}
-				msgSubscribeCh, err = msgBox.Subscribe(pubSubReq.GetSubscriberId())
+				msgSubscriberCh, err = msgBox.Subscribe(pubSubReq.GetSubscriberId())
 				if err != nil {
 					resCh <- &pb.PubSubRes{
 						Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
@@ -142,7 +142,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 					fmt.Println(err)
 					continue
 				}
-			case data := <-msgSubscribeCh:
+			case data := <-msgSubscriberCh:
 				err := stream.Send(&pb.PubSubRes{
 					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
 					Data: data,
