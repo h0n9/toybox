@@ -30,7 +30,7 @@ import (
 var (
 	tlsEnabled bool
 	hostAddr   string
-	msgBoxID   string
+	topicID    string
 	nickname   string
 )
 
@@ -94,7 +94,7 @@ var Cmd = &cobra.Command{
 		// request subscription
 		err = stream.Send(&pb.PubSubReq{
 			Type:         pb.PubSubReqType_PUB_SUB_REQ_TYPE_SUBSCRIBE,
-			TopicId:      "test",
+			TopicId:      topicID,
 			SubscriberId: nickname,
 		})
 		if err != nil {
@@ -181,7 +181,7 @@ var Cmd = &cobra.Command{
 
 				err = stream.Send(&pb.PubSubReq{
 					Type:    pb.PubSubReqType_PUB_SUB_REQ_TYPE_PUBLISH,
-					TopicId: "test",
+					TopicId: topicID,
 					Data:    data,
 				})
 				if err == io.EOF {
@@ -230,6 +230,6 @@ func init() {
 
 	Cmd.Flags().BoolVarP(&tlsEnabled, "tls", "t", false, "enable tls connection")
 	Cmd.Flags().StringVar(&hostAddr, "host", "localhost:8080", "host addr")
-	Cmd.Flags().StringVarP(&msgBoxID, "box", "b", "life is beautiful", "msg box id")
+	Cmd.Flags().StringVar(&topicID, "topic", "life is beautiful", "topic id")
 	Cmd.Flags().StringVarP(&nickname, "nickname", "n", fmt.Sprintf("alien-%d", r), "consumer id")
 }
