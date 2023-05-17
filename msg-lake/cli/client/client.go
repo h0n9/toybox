@@ -113,10 +113,10 @@ var Cmd = &cobra.Command{
 					sigCh <- syscall.SIGINT
 					break
 				}
-				if msg.GetType() == pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH {
+				data := msg.GetData()
+				if len(data) == 0 {
 					continue
 				}
-				data := msg.GetData()
 				msgCapsule := pb.MsgCapsule{}
 				err = proto.Unmarshal(data, &msgCapsule)
 				if err != nil {
