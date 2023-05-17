@@ -100,7 +100,6 @@ var Cmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Println("request subscription")
 
 		// execute goroutine (receiver)
 		wg.Add(1)

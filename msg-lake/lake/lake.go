@@ -43,8 +43,8 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 	var (
 		resCh chan *pb.PubSubRes = make(chan *pb.PubSubRes)
 
-		msgSubscriberID string
-		msgSubscriberCh msg.SubscriberCh
+		subscriberID string
+		subscriberCh msg.SubscriberCh
 
 		msgBoxes map[string]*msg.Box = make(map[string]*msg.Box)
 	)
@@ -60,9 +60,8 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 		for {
 			pubSubReq, err := stream.Recv()
 			if err != nil {
-				fmt.Println("leave all msg boxes")
 				for _, msgBox := range msgBoxes {
-					err = msgBox.StopSubscription(msgSubscriberID)
+					err = msgBox.StopSubscription(subscriberID)
 					if err != nil {
 						fmt.Println(err)
 					}
@@ -111,7 +110,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 					msgBox = newMsgBox
 					msgBoxes[pubSubReq.TopicId] = msgBox
 				}
-				msgSubscriberCh, err = msgBox.Subscribe(pubSubReq.GetSubscriberId())
+				subscriberCh, err = msgBox.Subscribe(pubSubReq.GetSubscriberId())
 				if err != nil {
 					resCh <- &pb.PubSubRes{
 						Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
@@ -119,7 +118,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 					}
 					continue
 				}
-				msgSubscriberID = pubSubReq.GetSubscriberId()
+				subscriberID = pubSubReq.GetSubscriberId()
 				resCh <- &pb.PubSubRes{
 					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
 					Ok:   true,
@@ -142,7 +141,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 					fmt.Println(err)
 					continue
 				}
-			case data := <-msgSubscriberCh:
+			case data := <-subscriberCh:
 				err := stream.Send(&pb.PubSubRes{
 					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
 					Data: data,
