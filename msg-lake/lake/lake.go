@@ -66,6 +66,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 						fmt.Println(err)
 					}
 				}
+				fmt.Printf("subscriber '%s' left\n", subscriberID)
 				return
 			}
 
@@ -123,6 +124,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
 					Ok:   true,
 				}
+				fmt.Printf("subscriber '%s' subscribing\n", subscriberID)
 			}
 		}
 	}()
