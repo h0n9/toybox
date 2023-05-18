@@ -2,6 +2,8 @@ package lake
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"sync"
 
@@ -111,7 +113,11 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 					msgBox = newMsgBox
 					msgBoxes[pubSubReq.TopicId] = msgBox
 				}
-				subscriberCh, err = msgBox.Subscribe(pubSubReq.GetSubscriberId())
+				tmpSubscriberID := fmt.Sprintf("%s-%s",
+					pubSubReq.GetSubscriberId(),
+					generateRandomBase64String(4),
+				)
+				subscriberCh, err = msgBox.Subscribe(tmpSubscriberID)
 				if err != nil {
 					resCh <- &pb.PubSubRes{
 						Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
@@ -119,7 +125,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 					}
 					continue
 				}
-				subscriberID = pubSubReq.GetSubscriberId()
+				subscriberID = tmpSubscriberID
 				resCh <- &pb.PubSubRes{
 					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
 					Ok:   true,
@@ -159,4 +165,13 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 	wg.Wait()
 
 	return nil
+}
+
+func generateRandomBase64String(size int) string {
+	bytes := make([]byte, size)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return ""
+	}
+	return base64.RawStdEncoding.EncodeToString(bytes)
 }
