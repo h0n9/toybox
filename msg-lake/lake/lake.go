@@ -2,83 +2,176 @@ package lake
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
-	"io"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"sync"
 
 	"github.com/h0n9/toybox/msg-lake/msg"
-	"github.com/h0n9/toybox/msg-lake/msg/box"
-	"github.com/h0n9/toybox/msg-lake/msg/center"
 	pb "github.com/h0n9/toybox/msg-lake/proto"
+	"github.com/h0n9/toybox/msg-lake/relayer"
 )
 
-type LakeServer struct {
+type LakeService struct {
 	pb.UnimplementedLakeServer
 
-	ctx       context.Context
-	msgCenter *center.Light
+	ctx     context.Context
+	relayer *relayer.Relayer
 }
 
-func NewLakeServer(ctx context.Context) *LakeServer {
-	return &LakeServer{
-		ctx:       ctx,
-		msgCenter: center.NewLight(ctx),
-	}
-}
-
-func (ls *LakeServer) Close() {
-	// TODO: implement Close() method
-}
-
-func (ls *LakeServer) Send(stream pb.Lake_SendServer) error {
-	var (
-		msgBoxID string = ""
-		msgBox   *box.Light
-
-		producerChan msg.CapsuleChan
-	)
-	for {
-		req, err := stream.Recv()
-		if err == io.EOF {
-			return stream.SendAndClose(&pb.SendRes{Ok: true})
-		}
-		if err != nil {
-			return err
-		}
-		newMsgBoxID := req.GetMsgBoxId()
-		if msgBoxID != newMsgBoxID {
-			msgBoxID = newMsgBoxID
-			msgBox = ls.msgCenter.GetMsgBox(msgBoxID)
-			producerChan = msgBox.GetProducerChan()
-		}
-		producerChan <- req.GetMsgCapsule()
-	}
-}
-
-func (ls *LakeServer) Recv(req *pb.RecvReq, stream pb.Lake_RecvServer) error {
-	msgBoxID := req.GetMsgBoxId()
-	consumerID := req.GetConsumerId()
-
-	msgBox := ls.msgCenter.GetMsgBox(msgBoxID)
-	consumerChan, err := msgBox.CreateConsumerChan(consumerID)
+func NewLakeService(ctx context.Context) (*LakeService, error) {
+	relayer, err := relayer.NewRelayer(ctx, "0.0.0.0", 7733)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	go relayer.DiscoverPeers()
+	return &LakeService{
+		ctx:     ctx,
+		relayer: relayer,
+	}, nil
+}
 
-	for {
-		select {
-		case <-stream.Context().Done():
-			return msgBox.CloseConsumerChan(consumerID)
-		case msgCapsule := <-consumerChan:
-			err := stream.Send(&pb.RecvRes{MsgCapsule: msgCapsule})
+func (lakeService *LakeService) Close() error {
+	var err error
+	if lakeService.relayer != nil {
+		err = lakeService.relayer.Close()
+	}
+	return err
+}
+
+func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
+	wg := sync.WaitGroup{}
+
+	var (
+		resCh chan *pb.PubSubRes = make(chan *pb.PubSubRes)
+
+		subscriberID string
+		subscriberCh msg.SubscriberCh
+
+		msgBoxes map[string]*msg.Box = make(map[string]*msg.Box)
+	)
+	defer close(resCh)
+
+	msgCenter := lakeService.relayer.GetMsgCenter()
+
+	// req stream handler
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for {
+			pubSubReq, err := stream.Recv()
 			if err != nil {
-				code := status.Code(err)
-				if code != codes.Canceled && code != codes.Unavailable {
+				for _, msgBox := range msgBoxes {
+					err = msgBox.StopSubscription(subscriberID)
+					if err != nil {
+						fmt.Println(err)
+					}
+				}
+				fmt.Printf("subscriber '%s' left\n", subscriberID)
+				return
+			}
+
+			switch pubSubReq.Type {
+			case pb.PubSubReqType_PUB_SUB_REQ_TYPE_PUBLISH:
+				msgBox, exist := msgBoxes[pubSubReq.TopicId]
+				if !exist {
+					newMsgBox, err := msgCenter.GetBox(pubSubReq.TopicId)
+					if err != nil {
+						resCh <- &pb.PubSubRes{
+							Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
+							Ok:   false,
+						}
+						continue
+					}
+					msgBox = newMsgBox
+					msgBoxes[pubSubReq.TopicId] = msgBox
+				}
+				err = msgBox.Publish(pubSubReq.GetData())
+				if err != nil {
+					resCh <- &pb.PubSubRes{
+						Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
+						Ok:   false,
+					}
+					continue
+				}
+				resCh <- &pb.PubSubRes{
+					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
+					Ok:   true,
+				}
+			case pb.PubSubReqType_PUB_SUB_REQ_TYPE_SUBSCRIBE:
+				msgBox, exist := msgBoxes[pubSubReq.TopicId]
+				if !exist {
+					newMsgBox, err := msgCenter.GetBox(pubSubReq.TopicId)
+					if err != nil {
+						resCh <- &pb.PubSubRes{
+							Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
+							Ok:   false,
+						}
+						continue
+					}
+					msgBox = newMsgBox
+					msgBoxes[pubSubReq.TopicId] = msgBox
+				}
+				tmpSubscriberID := fmt.Sprintf("%s-%s",
+					pubSubReq.GetSubscriberId(),
+					generateRandomBase64String(4),
+				)
+				subscriberCh, err = msgBox.Subscribe(tmpSubscriberID)
+				if err != nil {
+					resCh <- &pb.PubSubRes{
+						Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
+						Ok:   false,
+					}
+					continue
+				}
+				subscriberID = tmpSubscriberID
+				resCh <- &pb.PubSubRes{
+					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
+					Ok:   true,
+				}
+				fmt.Printf("subscriber '%s' subscribing\n", subscriberID)
+			}
+		}
+	}()
+
+	// res stream handler
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for {
+			select {
+			// receive res msgs from channel and send
+			case res := <-resCh:
+				err := stream.Send(res)
+				if err != nil {
 					fmt.Println(err)
+					continue
+				}
+			case data := <-subscriberCh:
+				err := stream.Send(&pb.PubSubRes{
+					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
+					Data: data,
+				})
+				if err != nil {
+					fmt.Println(err)
+					continue
 				}
 			}
 		}
+	}()
+
+	wg.Wait()
+
+	return nil
+}
+
+func generateRandomBase64String(size int) string {
+	bytes := make([]byte, size)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return ""
 	}
+	return base64.RawStdEncoding.EncodeToString(bytes)
 }

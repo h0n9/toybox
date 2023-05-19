@@ -3,9 +3,8 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/h0n9/toybox/msg-lake/cli/agent"
 	"github.com/h0n9/toybox/msg-lake/cli/client"
-	"github.com/h0n9/toybox/msg-lake/cli/lab"
-	"github.com/h0n9/toybox/msg-lake/cli/server"
 )
 
 var RootCmd = &cobra.Command{
@@ -16,8 +15,7 @@ var RootCmd = &cobra.Command{
 func init() {
 	cobra.EnableCommandSorting = false
 	RootCmd.AddCommand(
-		server.Cmd,
+		agent.Cmd,
 		client.Cmd,
-		lab.Cmd,
 	)
 }

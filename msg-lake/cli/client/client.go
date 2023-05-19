@@ -15,14 +15,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/postie-labs/go-postie-lib/crypto"
 	"github.com/spf13/cobra"
+
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/postie-labs/go-postie-lib/crypto"
 
 	pb "github.com/h0n9/toybox/msg-lake/proto"
 )
@@ -30,7 +30,7 @@ import (
 var (
 	tlsEnabled bool
 	hostAddr   string
-	msgBoxID   string
+	topicID    string
 	nickname   string
 )
 
@@ -86,33 +86,43 @@ var Cmd = &cobra.Command{
 		}
 		cli := pb.NewLakeClient(conn)
 
+		stream, err := cli.PubSub(ctx)
+		if err != nil {
+			return err
+		}
+
+		// request subscription
+		err = stream.Send(&pb.PubSubReq{
+			Type:         pb.PubSubReqType_PUB_SUB_REQ_TYPE_SUBSCRIBE,
+			TopicId:      topicID,
+			SubscriberId: nickname,
+		})
+		if err != nil {
+			return err
+		}
+
 		// execute goroutine (receiver)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-
-			stream, err := cli.Recv(ctx, &pb.RecvReq{
-				MsgBoxId:   msgBoxID,
-				ConsumerId: nickname,
-			})
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-
 			for {
-				data, err := stream.Recv()
-				if err == io.EOF || status.Code(err) > codes.OK {
-					fmt.Println("stop receiving msgs")
-					break
-				}
+				msg, err := stream.Recv()
 				if err != nil {
 					fmt.Println(err)
 					sigCh <- syscall.SIGINT
 					break
 				}
+				data := msg.GetData()
+				if len(data) == 0 {
+					continue
+				}
+				msgCapsule := pb.MsgCapsule{}
+				err = proto.Unmarshal(data, &msgCapsule)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
 
-				msgCapsule := data.GetMsgCapsule()
 				signature := msgCapsule.GetSignature()
 				if bytes.Equal(signature.GetPubKey(), pubKeyBytes) {
 					continue
@@ -125,12 +135,6 @@ var Cmd = &cobra.Command{
 		// execute goroutine (sender)
 		go func() {
 			reader := bufio.NewReader(os.Stdin)
-			sendClient, err := cli.Send(ctx)
-			if err != nil {
-				fmt.Println(err)
-				sigCh <- syscall.SIGINT
-				return
-			}
 			for {
 				printInput(false)
 				input, err := reader.ReadString('\n')
@@ -161,26 +165,29 @@ var Cmd = &cobra.Command{
 					fmt.Println(err)
 					continue
 				}
-
-				err = sendClient.Send(&pb.SendReq{
-					MsgBoxId: msgBoxID,
-					MsgCapsule: &pb.MsgCapsule{
-						Msg: msg,
-						Signature: &pb.Signature{
-							PubKey:   pubKeyBytes,
-							SigBytes: sigBytes,
-						},
+				msgCapsule := pb.MsgCapsule{
+					Msg: msg,
+					Signature: &pb.Signature{
+						PubKey:   pubKeyBytes,
+						SigBytes: sigBytes,
 					},
+				}
+				data, err = proto.Marshal(&msgCapsule)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+
+				err = stream.Send(&pb.PubSubReq{
+					Type:    pb.PubSubReqType_PUB_SUB_REQ_TYPE_PUBLISH,
+					TopicId: topicID,
+					Data:    data,
 				})
 				if err == io.EOF {
-					res, err := sendClient.CloseAndRecv()
+					err := stream.CloseSend()
 					if err != nil {
 						fmt.Println(err)
 					}
-					if !res.GetOk() {
-						fmt.Println("something went wrong on closing send client")
-					}
-					return
 				}
 				if err != nil {
 					fmt.Println(err)
@@ -222,6 +229,6 @@ func init() {
 
 	Cmd.Flags().BoolVarP(&tlsEnabled, "tls", "t", false, "enable tls connection")
 	Cmd.Flags().StringVar(&hostAddr, "host", "localhost:8080", "host addr")
-	Cmd.Flags().StringVarP(&msgBoxID, "box", "b", "life is beautiful", "msg box id")
+	Cmd.Flags().StringVar(&topicID, "topic", "life is beautiful", "topic id")
 	Cmd.Flags().StringVarP(&nickname, "nickname", "n", fmt.Sprintf("alien-%d", r), "consumer id")
 }

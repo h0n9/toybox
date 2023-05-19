@@ -1,45 +1,20 @@
 version: "3.8"
+
 services:
-  server:
-    image: h0n9/msg-lake
+  agent:
     build:
       context: .
-    command: ["server"]
+    image: ghcr.io/h0n9/msg-lake
     ports:
-      - 8080:8080
-    healthcheck:
-      test: ["CMD", "grpc_health_probe", "-addr=:8080"]
-      start_period: 1s
-      interval: 1s
-      timeout: 30s
-      retries: 5
-    networks:
-      msg-lake-net:
-        ipv4_address: 172.19.0.2
-  client:
-    depends_on:
-      server:
-        condition: service_healthy
-    image: h0n9/msg-lake
-    build:
-      context: .
-    command: ["client", "-b", "topic-0", "--host", "172.19.0.2:8080"]
-    networks:
-      - msg-lake-net
-  load:
-    depends_on:
-      server:
-        condition: service_healthy
-    image: h0n9/msg-lake
+     - "8080-8089:8080"
+    command: ["agent"]
     deploy:
       replicas: 10
-    build:
-      context: .
-    command: ["lab", "test", "-u", "100", "--host", "172.19.0.2:8080"]
     networks:
-      - msg-lake-net
+      - msg-lake
+
 networks:
-  msg-lake-net:
+  msg-lake:
     ipam:
       driver: default
       config:
