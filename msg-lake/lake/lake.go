@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/rs/zerolog"
+
 	"github.com/h0n9/toybox/msg-lake/msg"
 	pb "github.com/h0n9/toybox/msg-lake/proto"
 	"github.com/h0n9/toybox/msg-lake/relayer"
@@ -16,27 +18,29 @@ type LakeService struct {
 	pb.UnimplementedLakeServer
 
 	ctx     context.Context
+	logger  *zerolog.Logger
 	relayer *relayer.Relayer
 }
 
-func NewLakeService(ctx context.Context) (*LakeService, error) {
-	relayer, err := relayer.NewRelayer(ctx, "0.0.0.0", 7733)
+func NewLakeService(ctx context.Context, logger *zerolog.Logger) (*LakeService, error) {
+	subLogger := logger.With().Str("module", "lake-service").Logger()
+	relayer, err := relayer.NewRelayer(ctx, logger, "0.0.0.0", 7733)
 	if err != nil {
 		return nil, err
 	}
 	go relayer.DiscoverPeers()
 	return &LakeService{
 		ctx:     ctx,
+		logger:  &subLogger,
 		relayer: relayer,
 	}, nil
 }
 
-func (lakeService *LakeService) Close() error {
-	var err error
+func (lakeService *LakeService) Close() {
 	if lakeService.relayer != nil {
-		err = lakeService.relayer.Close()
+		lakeService.relayer.Close()
 	}
-	return err
+	lakeService.logger.Info().Msg("closed lake service")
 }
 
 func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
@@ -65,10 +69,10 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 				for _, msgBox := range msgBoxes {
 					err = msgBox.StopSubscription(subscriberID)
 					if err != nil {
-						fmt.Println(err)
+						lakeService.logger.Err(err).Msg("")
 					}
 				}
-				fmt.Printf("subscriber '%s' left\n", subscriberID)
+				lakeService.logger.Info().Str("subscriber", subscriberID).Msg("left")
 				return
 			}
 
@@ -130,7 +134,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
 					Ok:   true,
 				}
-				fmt.Printf("subscriber '%s' subscribing\n", subscriberID)
+				lakeService.logger.Info().Str("subscriber", subscriberID).Msg("subscribing")
 			}
 		}
 	}()
@@ -146,7 +150,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 			case res := <-resCh:
 				err := stream.Send(res)
 				if err != nil {
-					fmt.Println(err)
+					lakeService.logger.Err(err).Msg("")
 					continue
 				}
 			case data := <-subscriberCh:
@@ -155,7 +159,7 @@ func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 					Data: data,
 				})
 				if err != nil {
-					fmt.Println(err)
+					lakeService.logger.Err(err).Msg("")
 					continue
 				}
 			}
