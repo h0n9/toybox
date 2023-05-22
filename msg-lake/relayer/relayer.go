@@ -1,24 +1,23 @@
 package relayer
 
 import (
-	"bufio"
 	"context"
 	"crypto/rand"
 	"fmt"
-	"time"
 
-	"github.com/h0n9/toybox/msg-lake/msg"
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 
 	"github.com/multiformats/go-multiaddr"
+	"github.com/rs/zerolog"
+
+	"github.com/h0n9/toybox/msg-lake/msg"
 )
 
 const (
@@ -27,7 +26,8 @@ const (
 )
 
 type Relayer struct {
-	ctx context.Context
+	ctx    context.Context
+	logger *zerolog.Logger
 
 	privKey crypto.PrivKey
 	pubKey  crypto.PubKey
@@ -38,19 +38,20 @@ type Relayer struct {
 	peerChan <-chan peer.AddrInfo
 }
 
-func NewRelayer(ctx context.Context, hostname string, port int) (*Relayer, error) {
+func NewRelayer(ctx context.Context, logger *zerolog.Logger, hostname string, port int) (*Relayer, error) {
+	subLogger := logger.With().Str("module", "relayer").Logger()
+
 	privKey, pubKey, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, rand.Reader)
 	if err != nil {
 		return nil, err
 	}
+	subLogger.Info().Msg("generated key pair for libp2p host")
 
 	h, err := newHost(hostname, port, privKey)
 	if err != nil {
 		return nil, err
 	}
-
-	// register stream handler
-	// h.SetStreamHandler(protocolID, handleStream)
+	subLogger.Info().Msg("initialized libp2p host")
 
 	// init mdns service
 	dn := newDiscoveryNotifee()
@@ -59,106 +60,56 @@ func NewRelayer(ctx context.Context, hostname string, port int) (*Relayer, error
 	if err != nil {
 		return nil, err
 	}
+	subLogger.Info().Msg("initialized mdns service")
 
-	fmt.Printf("listening on: %v\n", h.Addrs())
+	subLogger.Info().Msgf("listening libp2p host on %v", h.Addrs())
 
 	ps, err := pubsub.NewGossipSub(ctx, h)
 	if err != nil {
 		return nil, err
 	}
+	subLogger.Info().Msg("initialized gossip sub")
 
 	return &Relayer{
-		ctx: ctx,
+		ctx:    ctx,
+		logger: &subLogger,
 
 		privKey: privKey,
 		pubKey:  pubKey,
 
 		h:         h,
-		msgCenter: msg.NewCenter(ctx, ps),
+		msgCenter: msg.NewCenter(ctx, &subLogger, ps),
 
 		peerChan: dn.peerChan,
 	}, nil
 }
 
-func (relayer *Relayer) Close() error {
-	return relayer.h.Close()
+func (relayer *Relayer) Close() {
+	err := relayer.h.Close()
+	if err != nil {
+		relayer.logger.Err(err).Msg("")
+	}
+	relayer.logger.Info().Msg("closed relayer")
 }
 
 func (relayer *Relayer) DiscoverPeers() error {
 	for {
-		fmt.Println("waiting peers ...")
+		relayer.logger.Info().Msg("waiting peers")
 		peer := <-relayer.peerChan // blocks until discover new peers
-		fmt.Printf("found peer: %s\n", peer)
+		relayer.logger.Info().Str("peer", peer.String()).Msg("found")
 
-		fmt.Printf("connecting peer: %s\n", peer)
+		relayer.logger.Info().Str("peer", peer.String()).Msg("connecting")
 		err := relayer.h.Connect(relayer.ctx, peer)
 		if err != nil {
-			fmt.Printf("failed to connect peer: %s\n", peer)
+			relayer.logger.Err(err).Str("peer", peer.String()).Msg("")
 			continue
 		}
-
-		// stream, err := relayer.h.NewStream(relayer.ctx, peer.ID, protocolID)
-		// if err != nil {
-		// 	fmt.Println(err)
-		// 	continue
-		// }
-		// rw := bufio.NewReadWriter(
-		// 	bufio.NewReader(stream),
-		// 	bufio.NewWriter(stream),
-		// )
-		// go writeData(relayer.h.ID().String(), rw)
-
-		fmt.Printf("connected to peer: %s\n", peer)
+		relayer.logger.Info().Str("peer", peer.String()).Msg("connected")
 	}
 }
 
 func (relayer *Relayer) GetMsgCenter() *msg.Center {
 	return relayer.msgCenter
-}
-
-func handleStream(s network.Stream) {
-	fmt.Println("got a new stream")
-	rw := bufio.NewReadWriter(
-		bufio.NewReader(s),
-		bufio.NewWriter(s),
-	)
-	go readData(s.ID(), rw)
-}
-
-func readData(id string, rw *bufio.ReadWriter) {
-	for {
-		str, err := rw.ReadString('\n')
-		if err != nil {
-			fmt.Println("Error reading from buffer")
-			break
-		}
-
-		if str == "" {
-			return
-		}
-		if str != "\n" {
-			// Green console colour: 	\x1b[32m
-			// Reset console colour: 	\x1b[0m
-			fmt.Printf("\x1b[32m%s\x1b[0m> ", str)
-		}
-	}
-}
-
-func writeData(id string, rw *bufio.ReadWriter) {
-	for {
-		data := fmt.Sprintf("%s - %s\n", id, time.Now().String())
-		_, err := rw.WriteString(data)
-		if err != nil {
-			fmt.Println("Error writing to buffer")
-			break
-		}
-		err = rw.Flush()
-		if err != nil {
-			fmt.Println("Error flushing buffer")
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
 }
 
 type discoveryNotifee struct {

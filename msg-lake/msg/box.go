@@ -6,11 +6,13 @@ import (
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/rs/zerolog"
 )
 
 type Box struct {
-	ctx context.Context
-	wg  sync.WaitGroup
+	ctx    context.Context
+	logger *zerolog.Logger
+	wg     sync.WaitGroup
 
 	topicID string
 	topic   *pubsub.Topic
@@ -24,14 +26,16 @@ type Box struct {
 	subscribers  map[string]SubscriberCh
 }
 
-func NewBox(ctx context.Context, topicID string, topic *pubsub.Topic) (*Box, error) {
+func NewBox(ctx context.Context, logger *zerolog.Logger, topicID string, topic *pubsub.Topic) (*Box, error) {
+	subLogger := logger.With().Str("module", "msg-box").Logger()
 	subscription, err := topic.Subscribe()
 	if err != nil {
 		return nil, err
 	}
 	box := Box{
-		ctx: ctx,
-		wg:  sync.WaitGroup{},
+		ctx:    ctx,
+		logger: &subLogger,
+		wg:     sync.WaitGroup{},
 
 		topicID: topicID,
 		topic:   topic,
@@ -85,7 +89,7 @@ func NewBox(ctx context.Context, topicID string, topic *pubsub.Topic) (*Box, err
 		for {
 			msg, err := subscription.Next(ctx)
 			if err != nil {
-				fmt.Println(err)
+				subLogger.Err(err).Msg("")
 				return
 			}
 			box.subscriberCh <- msg.GetData()

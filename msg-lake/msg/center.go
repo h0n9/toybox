@@ -4,18 +4,22 @@ import (
 	"context"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/rs/zerolog"
 )
 
 type Center struct {
-	ctx context.Context
+	ctx    context.Context
+	logger *zerolog.Logger
 
 	ps    *pubsub.PubSub
 	boxes map[string]*Box
 }
 
-func NewCenter(ctx context.Context, ps *pubsub.PubSub) *Center {
+func NewCenter(ctx context.Context, logger *zerolog.Logger, ps *pubsub.PubSub) *Center {
+	subLogger := logger.With().Str("module", "msg-center").Logger()
 	return &Center{
-		ctx: ctx,
+		ctx:    ctx,
+		logger: &subLogger,
 
 		ps:    ps,
 		boxes: make(map[string]*Box),
@@ -29,7 +33,7 @@ func (center *Center) GetBox(topicID string) (*Box, error) {
 		if err != nil {
 			return nil, err
 		}
-		newBox, err := NewBox(center.ctx, topicID, topic)
+		newBox, err := NewBox(center.ctx, center.logger, topicID, topic)
 		if err != nil {
 			return nil, err
 		}
