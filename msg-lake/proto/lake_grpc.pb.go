@@ -19,14 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Lake_PubSub_FullMethodName = "/Lake/PubSub"
+	Lake_Publish_FullMethodName   = "/Lake/Publish"
+	Lake_Subscribe_FullMethodName = "/Lake/Subscribe"
 )
 
 // LakeClient is the client API for Lake service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type LakeClient interface {
-	PubSub(ctx context.Context, opts ...grpc.CallOption) (Lake_PubSubClient, error)
+	Publish(ctx context.Context, in *PublishReq, opts ...grpc.CallOption) (*PublishRes, error)
+	Subscribe(ctx context.Context, in *SubscribeReq, opts ...grpc.CallOption) (Lake_SubscribeClient, error)
 }
 
 type lakeClient struct {
@@ -37,31 +39,41 @@ func NewLakeClient(cc grpc.ClientConnInterface) LakeClient {
 	return &lakeClient{cc}
 }
 
-func (c *lakeClient) PubSub(ctx context.Context, opts ...grpc.CallOption) (Lake_PubSubClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Lake_ServiceDesc.Streams[0], Lake_PubSub_FullMethodName, opts...)
+func (c *lakeClient) Publish(ctx context.Context, in *PublishReq, opts ...grpc.CallOption) (*PublishRes, error) {
+	out := new(PublishRes)
+	err := c.cc.Invoke(ctx, Lake_Publish_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &lakePubSubClient{stream}
+	return out, nil
+}
+
+func (c *lakeClient) Subscribe(ctx context.Context, in *SubscribeReq, opts ...grpc.CallOption) (Lake_SubscribeClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Lake_ServiceDesc.Streams[0], Lake_Subscribe_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &lakeSubscribeClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
 	return x, nil
 }
 
-type Lake_PubSubClient interface {
-	Send(*PubSubReq) error
-	Recv() (*PubSubRes, error)
+type Lake_SubscribeClient interface {
+	Recv() (*SubscribeRes, error)
 	grpc.ClientStream
 }
 
-type lakePubSubClient struct {
+type lakeSubscribeClient struct {
 	grpc.ClientStream
 }
 
-func (x *lakePubSubClient) Send(m *PubSubReq) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *lakePubSubClient) Recv() (*PubSubRes, error) {
-	m := new(PubSubRes)
+func (x *lakeSubscribeClient) Recv() (*SubscribeRes, error) {
+	m := new(SubscribeRes)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -72,7 +84,8 @@ func (x *lakePubSubClient) Recv() (*PubSubRes, error) {
 // All implementations must embed UnimplementedLakeServer
 // for forward compatibility
 type LakeServer interface {
-	PubSub(Lake_PubSubServer) error
+	Publish(context.Context, *PublishReq) (*PublishRes, error)
+	Subscribe(*SubscribeReq, Lake_SubscribeServer) error
 	mustEmbedUnimplementedLakeServer()
 }
 
@@ -80,8 +93,11 @@ type LakeServer interface {
 type UnimplementedLakeServer struct {
 }
 
-func (UnimplementedLakeServer) PubSub(Lake_PubSubServer) error {
-	return status.Errorf(codes.Unimplemented, "method PubSub not implemented")
+func (UnimplementedLakeServer) Publish(context.Context, *PublishReq) (*PublishRes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Publish not implemented")
+}
+func (UnimplementedLakeServer) Subscribe(*SubscribeReq, Lake_SubscribeServer) error {
+	return status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
 }
 func (UnimplementedLakeServer) mustEmbedUnimplementedLakeServer() {}
 
@@ -96,30 +112,43 @@ func RegisterLakeServer(s grpc.ServiceRegistrar, srv LakeServer) {
 	s.RegisterService(&Lake_ServiceDesc, srv)
 }
 
-func _Lake_PubSub_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(LakeServer).PubSub(&lakePubSubServer{stream})
-}
-
-type Lake_PubSubServer interface {
-	Send(*PubSubRes) error
-	Recv() (*PubSubReq, error)
-	grpc.ServerStream
-}
-
-type lakePubSubServer struct {
-	grpc.ServerStream
-}
-
-func (x *lakePubSubServer) Send(m *PubSubRes) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *lakePubSubServer) Recv() (*PubSubReq, error) {
-	m := new(PubSubReq)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
+func _Lake_Publish_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PublishReq)
+	if err := dec(in); err != nil {
 		return nil, err
 	}
-	return m, nil
+	if interceptor == nil {
+		return srv.(LakeServer).Publish(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Lake_Publish_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LakeServer).Publish(ctx, req.(*PublishReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Lake_Subscribe_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeReq)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(LakeServer).Subscribe(m, &lakeSubscribeServer{stream})
+}
+
+type Lake_SubscribeServer interface {
+	Send(*SubscribeRes) error
+	grpc.ServerStream
+}
+
+type lakeSubscribeServer struct {
+	grpc.ServerStream
+}
+
+func (x *lakeSubscribeServer) Send(m *SubscribeRes) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 // Lake_ServiceDesc is the grpc.ServiceDesc for Lake service.
@@ -128,13 +157,17 @@ func (x *lakePubSubServer) Recv() (*PubSubReq, error) {
 var Lake_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "Lake",
 	HandlerType: (*LakeServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Publish",
+			Handler:    _Lake_Publish_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "PubSub",
-			Handler:       _Lake_PubSub_Handler,
+			StreamName:    "Subscribe",
+			Handler:       _Lake_Subscribe_Handler,
 			ServerStreams: true,
-			ClientStreams: true,
 		},
 	},
 	Metadata: "proto/lake.proto",
