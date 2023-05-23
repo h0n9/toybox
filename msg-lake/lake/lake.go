@@ -43,6 +43,9 @@ func (lakeService *LakeService) Close() {
 	lakeService.logger.Info().Msg("closed lake service")
 }
 
+func (lakeService *LakeService) Publish(ctx context.Context, req *pb.PublishReq) (*pb.PublishRes, error)
+func (lakeService *LakeService) Subscribe(stream pb.Lake_SubscribeServer) error
+
 func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
 	wg := sync.WaitGroup{}
 
