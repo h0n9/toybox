@@ -32,7 +32,7 @@ message SubscribeRes {
 }
 
 enum SubscribeResType {
-  UNSPECIFIED = 0;
-  ACK = 1;
-  RELAY = 2;
+  SUBSCRIBE_RES_TYPE_UNSPECIFIED = 0;
+  SUBSCRIBE_RES_TYPE_ACK = 1;
+  SUBSCRIBE_RES_TYPE_RELAY = 2;
 }
