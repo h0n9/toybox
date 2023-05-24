@@ -2,16 +2,20 @@ package lake
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
-	"sync"
 
 	"github.com/rs/zerolog"
 
-	"github.com/h0n9/toybox/msg-lake/msg"
 	pb "github.com/h0n9/toybox/msg-lake/proto"
 	"github.com/h0n9/toybox/msg-lake/relayer"
+	"github.com/h0n9/toybox/msg-lake/util"
+)
+
+const (
+	MaxTopicIDLen = 30
+	MinTopicIDLen = 1
+
+	RandomSubscriberIDLen = 10
 )
 
 type LakeService struct {
@@ -43,139 +47,116 @@ func (lakeService *LakeService) Close() {
 	lakeService.logger.Info().Msg("closed lake service")
 }
 
-func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
-	wg := sync.WaitGroup{}
+func (lakeService *LakeService) Publish(ctx context.Context, req *pb.PublishReq) (*pb.PublishRes, error) {
+	// get parameters
+	topicID := req.GetTopicId()
+	data := req.GetData()
 
-	var (
-		resCh chan *pb.PubSubRes = make(chan *pb.PubSubRes)
+	// set publish res
+	publishRes := pb.PublishRes{
+		TopicId: topicID,
+		Ok:      false,
+	}
 
-		subscriberID string
-		subscriberCh msg.SubscriberCh
+	// check constraints
+	if !util.CheckStrLen(topicID, MinTopicIDLen, MaxTopicIDLen) {
+		return &publishRes, fmt.Errorf("failed to verify length of topic id")
+	}
 
-		msgBoxes map[string]*msg.Box = make(map[string]*msg.Box)
-	)
-	defer close(resCh)
-
+	// get msg center
 	msgCenter := lakeService.relayer.GetMsgCenter()
 
-	// req stream handler
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		for {
-			pubSubReq, err := stream.Recv()
-			if err != nil {
-				for _, msgBox := range msgBoxes {
-					err = msgBox.StopSubscription(subscriberID)
-					if err != nil {
-						lakeService.logger.Err(err).Msg("")
-					}
-				}
-				lakeService.logger.Info().Str("subscriber", subscriberID).Msg("left")
-				return
-			}
-
-			switch pubSubReq.Type {
-			case pb.PubSubReqType_PUB_SUB_REQ_TYPE_PUBLISH:
-				msgBox, exist := msgBoxes[pubSubReq.TopicId]
-				if !exist {
-					newMsgBox, err := msgCenter.GetBox(pubSubReq.TopicId)
-					if err != nil {
-						resCh <- &pb.PubSubRes{
-							Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
-							Ok:   false,
-						}
-						continue
-					}
-					msgBox = newMsgBox
-					msgBoxes[pubSubReq.TopicId] = msgBox
-				}
-				err = msgBox.Publish(pubSubReq.GetData())
-				if err != nil {
-					resCh <- &pb.PubSubRes{
-						Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
-						Ok:   false,
-					}
-					continue
-				}
-				resCh <- &pb.PubSubRes{
-					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
-					Ok:   true,
-				}
-			case pb.PubSubReqType_PUB_SUB_REQ_TYPE_SUBSCRIBE:
-				msgBox, exist := msgBoxes[pubSubReq.TopicId]
-				if !exist {
-					newMsgBox, err := msgCenter.GetBox(pubSubReq.TopicId)
-					if err != nil {
-						resCh <- &pb.PubSubRes{
-							Type: pb.PubSubResType_PUB_SUB_RES_TYPE_PUBLISH,
-							Ok:   false,
-						}
-						continue
-					}
-					msgBox = newMsgBox
-					msgBoxes[pubSubReq.TopicId] = msgBox
-				}
-				tmpSubscriberID := fmt.Sprintf("%s-%s",
-					pubSubReq.GetSubscriberId(),
-					generateRandomBase64String(4),
-				)
-				subscriberCh, err = msgBox.Subscribe(tmpSubscriberID)
-				if err != nil {
-					resCh <- &pb.PubSubRes{
-						Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
-						Ok:   false,
-					}
-					continue
-				}
-				subscriberID = tmpSubscriberID
-				resCh <- &pb.PubSubRes{
-					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
-					Ok:   true,
-				}
-				lakeService.logger.Info().Str("subscriber", subscriberID).Msg("subscribing")
-			}
-		}
-	}()
-
-	// res stream handler
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		for {
-			select {
-			// receive res msgs from channel and send
-			case res := <-resCh:
-				err := stream.Send(res)
-				if err != nil {
-					lakeService.logger.Err(err).Msg("")
-					continue
-				}
-			case data := <-subscriberCh:
-				err := stream.Send(&pb.PubSubRes{
-					Type: pb.PubSubResType_PUB_SUB_RES_TYPE_SUBSCRIBE,
-					Data: data,
-				})
-				if err != nil {
-					lakeService.logger.Err(err).Msg("")
-					continue
-				}
-			}
-		}
-	}()
-
-	wg.Wait()
-
-	return nil
-}
-
-func generateRandomBase64String(size int) string {
-	bytes := make([]byte, size)
-	_, err := rand.Read(bytes)
+	// get msg box
+	msgBox, err := msgCenter.GetBox(topicID)
 	if err != nil {
-		return ""
+		return &publishRes, err
 	}
-	return base64.RawStdEncoding.EncodeToString(bytes)
+
+	// publish msg
+	err = msgBox.Publish(data)
+	if err != nil {
+		return &publishRes, err
+	}
+
+	// update publish res
+	publishRes.Ok = true
+
+	return &publishRes, nil
+}
+func (lakeService *LakeService) Subscribe(req *pb.SubscribeReq, stream pb.Lake_SubscribeServer) error {
+	// get parameters
+	topicID := req.GetTopicId()
+
+	// set subscribe res
+	res := pb.SubscribeRes{
+		Type:    pb.SubscribeResType_SUBSCRIBE_RES_TYPE_ACK,
+		TopicId: topicID,
+		Res: &pb.SubscribeRes_Ok{
+			Ok: false,
+		},
+	}
+
+	// check constraints
+	if !util.CheckStrLen(topicID, MinTopicIDLen, MaxTopicIDLen) {
+		err := stream.Send(&res)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// get msg center
+	msgCenter := lakeService.relayer.GetMsgCenter()
+
+	// get msg box
+	msgBox, err := msgCenter.GetBox(topicID)
+	if err != nil {
+		err := stream.Send(&res)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// generate random subscriber id
+	subscriberID := util.GenerateRandomBase64String(RandomSubscriberIDLen)
+
+	// register subscriber id to msg box
+	subscriberCh, err := msgBox.Subscribe(subscriberID)
+	if err != nil {
+		err := stream.Send(&res)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// update subscriber res
+	res.SubscriberId = subscriberID
+	res.Res = &pb.SubscribeRes_Ok{Ok: true}
+
+	// send subscriber res
+	err = stream.Send(&res)
+	if err != nil {
+		return err
+	}
+
+	// update subscriber res
+	res.Type = pb.SubscribeResType_SUBSCRIBE_RES_TYPE_ACK
+
+	// relay msgs to susbscriber
+	for {
+		select {
+		case data := <-subscriberCh:
+			res.Res = &pb.SubscribeRes_Data{Data: data}
+			err := stream.Send(&res)
+			if err != nil {
+				err := msgBox.StopSubscription(subscriberID)
+				if err != nil {
+					lakeService.logger.Err(err).Msg("")
+				}
+			}
+			continue
+		}
+	}
 }

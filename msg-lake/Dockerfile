@@ -4,6 +4,7 @@ WORKDIR /usr/src/app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY cmd/ cmd/
+COPY util/ util/
 COPY proto/ proto/
 COPY cli/ cli/
 COPY msg/ msg/
