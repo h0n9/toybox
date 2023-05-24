@@ -1,9 +1,10 @@
-# Message Lake (msg-lake)
+# Message Lake 📮
 
-Message Lake is an open-source message exchanging platform designed to provide a
-simple and scalable solution for message-based communication between clients. It
-aims to provide an environment where clients can become or work as servers with
-a publish-subscribe model, enabling flexible and dynamic communication patterns.
+Message Lake (msg-lake) is an open-source message exchanging platform designed
+to provide a simple and scalable solution for message-based communication
+between clients. It aims to provide an environment where clients can become or
+work as servers with a publish-subscribe model, enabling flexible and dynamic
+communication patterns.
 
 ## Features
 
