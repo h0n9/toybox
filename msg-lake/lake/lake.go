@@ -12,6 +12,12 @@ import (
 	"github.com/h0n9/toybox/msg-lake/msg"
 	pb "github.com/h0n9/toybox/msg-lake/proto"
 	"github.com/h0n9/toybox/msg-lake/relayer"
+	"github.com/h0n9/toybox/msg-lake/util"
+)
+
+const (
+	MaxTopicIDLen = 30
+	MinTopicIDLen = 1
 )
 
 type LakeService struct {
@@ -43,7 +49,42 @@ func (lakeService *LakeService) Close() {
 	lakeService.logger.Info().Msg("closed lake service")
 }
 
-func (lakeService *LakeService) Publish(ctx context.Context, req *pb.PublishReq) (*pb.PublishRes, error)
+func (lakeService *LakeService) Publish(ctx context.Context, req *pb.PublishReq) (*pb.PublishRes, error) {
+	// get parameters
+	topicID := req.GetTopicId()
+	data := req.GetData()
+
+	// set publish res
+	publishRes := pb.PublishRes{
+		TopicId: topicID,
+		Ok:      false,
+	}
+
+	// check constraints
+	if !util.CheckStrLen(topicID, MinTopicIDLen, MaxTopicIDLen) {
+		return &publishRes, fmt.Errorf("failed to verify length of topic id")
+	}
+
+	// get msg center
+	msgCenter := lakeService.relayer.GetMsgCenter()
+
+	// get msg box
+	msgBox, err := msgCenter.GetBox(topicID)
+	if err != nil {
+		return &publishRes, err
+	}
+
+	// publish msg
+	err = msgBox.Publish(data)
+	if err != nil {
+		return &publishRes, err
+	}
+
+	// update publish res
+	publishRes.Ok = true
+
+	return &publishRes, nil
+}
 func (lakeService *LakeService) Subscribe(stream pb.Lake_SubscribeServer) error
 
 func (lakeService *LakeService) PubSub(stream pb.Lake_PubSubServer) error {
