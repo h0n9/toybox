@@ -86,19 +86,25 @@ var Cmd = &cobra.Command{
 		}
 		cli := pb.NewLakeClient(conn)
 
-		stream, err := cli.PubSub(ctx)
+		stream, err := cli.Subscribe(ctx, &pb.SubscribeReq{
+			TopicId: topicID,
+		})
 		if err != nil {
 			return err
 		}
 
-		// request subscription
-		err = stream.Send(&pb.PubSubReq{
-			Type:         pb.PubSubReqType_PUB_SUB_REQ_TYPE_SUBSCRIBE,
-			TopicId:      topicID,
-			SubscriberId: nickname,
-		})
+		// block until recieve subscribe ack msg
+		subRes, err := stream.Recv()
 		if err != nil {
 			return err
+		}
+
+		// check subscribe ack msg
+		if subRes.Type != pb.SubscribeResType_SUBSCRIBE_RES_TYPE_ACK {
+			return fmt.Errorf("failed to receive subscribe ack from agent")
+		}
+		if !subRes.GetOk() {
+			return fmt.Errorf("failed to begin subscribing msgs")
 		}
 
 		// execute goroutine (receiver)
@@ -178,8 +184,7 @@ var Cmd = &cobra.Command{
 					continue
 				}
 
-				err = stream.Send(&pb.PubSubReq{
-					Type:    pb.PubSubReqType_PUB_SUB_REQ_TYPE_PUBLISH,
+				pubRes, err := cli.Publish(ctx, &pb.PublishReq{
 					TopicId: topicID,
 					Data:    data,
 				})
@@ -191,6 +196,12 @@ var Cmd = &cobra.Command{
 				}
 				if err != nil {
 					fmt.Println(err)
+					continue
+				}
+
+				// check publish res
+				if !pubRes.GetOk() {
+					fmt.Println("failed to send message")
 					continue
 				}
 			}
