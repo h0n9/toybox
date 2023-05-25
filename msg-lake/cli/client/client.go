@@ -100,7 +100,7 @@ var Cmd = &cobra.Command{
 		}
 
 		// check subscribe ack msg
-		if subRes.Type != pb.SubscribeResType_SUBSCRIBE_RES_TYPE_ACK {
+		if subRes.GetType() != pb.SubscribeResType_SUBSCRIBE_RES_TYPE_ACK {
 			return fmt.Errorf("failed to receive subscribe ack from agent")
 		}
 		if !subRes.GetOk() {
@@ -117,6 +117,9 @@ var Cmd = &cobra.Command{
 					fmt.Println(err)
 					sigCh <- syscall.SIGINT
 					break
+				}
+				if msg.GetType() != pb.SubscribeResType_SUBSCRIBE_RES_TYPE_RELAY {
+					continue
 				}
 				data := msg.GetData()
 				if len(data) == 0 {
