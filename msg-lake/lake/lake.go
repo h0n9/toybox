@@ -145,8 +145,7 @@ func (lakeService *LakeService) Subscribe(req *pb.SubscribeReq, stream pb.Lake_S
 	res.Type = pb.SubscribeResType_SUBSCRIBE_RES_TYPE_RELAY
 
 	// relay msgs to susbscriber
-	for {
-		data := <-subscriberCh
+	for data := range subscriberCh {
 		res.Res = &pb.SubscribeRes_Data{Data: data}
 		err := stream.Send(&res)
 		if err != nil {
@@ -157,4 +156,6 @@ func (lakeService *LakeService) Subscribe(req *pb.SubscribeReq, stream pb.Lake_S
 		}
 		continue
 	}
+
+	return nil
 }
