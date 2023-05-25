@@ -131,6 +131,8 @@ func (lakeService *LakeService) Subscribe(req *pb.SubscribeReq, stream pb.Lake_S
 		return nil
 	}
 
+	lakeService.logger.Debug().Str("subscriber-id", subscriberID).Msg("registered")
+
 	// update subscriber res
 	res.SubscriberId = subscriberID
 	res.Res = &pb.SubscribeRes_Ok{Ok: true}
@@ -153,6 +155,7 @@ func (lakeService *LakeService) Subscribe(req *pb.SubscribeReq, stream pb.Lake_S
 			if err != nil {
 				lakeService.logger.Err(err).Msg("")
 			}
+			break
 		}
 		continue
 	}
