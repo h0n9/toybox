@@ -6,6 +6,8 @@ services:
       context: .
     image: h0n9/msg-lake
     command: ["agent"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
     deploy:
       replicas: 10
   nginx:
@@ -17,3 +19,5 @@ services:
       - ./misc/nginx.conf:/etc/nginx/conf.d/msg-lake.conf:ro
     ports:
       - 8080:8080
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
