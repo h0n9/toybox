@@ -9,7 +9,7 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
     deploy:
-      replicas: 10
+      replicas: 3
   nginx:
     depends_on:
       - agent
@@ -18,12 +18,12 @@ services:
     volumes:
       - ./misc/nginx.conf:/etc/nginx/conf.d/msg-lake.conf:ro
     ports:
-      - 8080:8080
+      - 8080-8089:8080
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
+    deploy:
+      replicas: 3
   client:
-    build:
-      context: .
     depends_on:
       - nginx
     image: h0n9/msg-lake
