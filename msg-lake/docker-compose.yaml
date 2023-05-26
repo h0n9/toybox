@@ -21,3 +21,12 @@ services:
       - 8080:8080
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
+  client:
+    build:
+      context: .
+    depends_on:
+      - nginx
+    image: h0n9/msg-lake
+    command: ["client", "--host", "nginx:8080"]
+    deploy:
+      replicas: 0
