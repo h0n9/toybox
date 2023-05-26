@@ -11,6 +11,7 @@ import (
 
 	"github.com/h0n9/toybox/msg-lake/lake"
 	pb "github.com/h0n9/toybox/msg-lake/proto"
+	"github.com/h0n9/toybox/msg-lake/util"
 )
 
 const (
@@ -22,6 +23,12 @@ var Cmd = &cobra.Command{
 	Short: "run msg lake agent",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logger := zerolog.New(os.Stdout).With().Timestamp().Str("service", "msg-lake").Logger()
+		logLevel, err := zerolog.ParseLevel(util.GetLogLevel())
+		if err != nil {
+			return err
+		}
+		zerolog.SetGlobalLevel(logLevel)
+		logger.Info().Msg("initalized logger")
 
 		ctx := context.Background()
 		logger.Info().Msg("initalized context")

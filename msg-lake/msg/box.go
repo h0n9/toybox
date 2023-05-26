@@ -43,7 +43,7 @@ func NewBox(ctx context.Context, logger *zerolog.Logger, topicID string, topic *
 		setSubscriberCh:    make(setSubscriberCh),
 		deleteSubscriberCh: make(deleteSubscriberCh),
 
-		subscriberCh: make(SubscriberCh),
+		subscriberCh: make(SubscriberCh, 100),
 		subscription: subscription,
 		subscribers:  make(map[string]SubscriberCh),
 	}
@@ -59,8 +59,10 @@ func NewBox(ctx context.Context, logger *zerolog.Logger, topicID string, topic *
 		for {
 			select {
 			case msg = <-box.subscriberCh:
-				for _, subscriberCh := range box.subscribers {
+				for subscriberID, subscriberCh := range box.subscribers {
+					subLogger.Debug().Str("subscriber-id", subscriberID).Msg("relaying")
 					subscriberCh <- msg
+					subLogger.Debug().Str("subscriber-id", subscriberID).Msg("relayed")
 				}
 			case setSubscriber = <-box.setSubscriberCh:
 				_, exist := box.subscribers[setSubscriber.subscriberID]
@@ -71,12 +73,15 @@ func NewBox(ctx context.Context, logger *zerolog.Logger, topicID string, topic *
 				box.subscribers[setSubscriber.subscriberID] = setSubscriber.subscriberCh
 				setSubscriber.errCh <- nil
 			case deleteSubscriber = <-box.deleteSubscriberCh:
-				_, exist := box.subscribers[deleteSubscriber.subscriberID]
+				subscriberCh, exist := box.subscribers[deleteSubscriber.subscriberID]
 				if !exist {
 					deleteSubscriber.errCh <- fmt.Errorf("%s is not subscribing", <-deleteSubscriber.errCh)
 					continue
 				}
+				close(subscriberCh)
+				subLogger.Debug().Str("subscriber-id", deleteSubscriber.subscriberID).Msg("closed channel")
 				delete(box.subscribers, deleteSubscriber.subscriberID)
+				subLogger.Debug().Str("subscriber-id", deleteSubscriber.subscriberID).Msg("deleted channel")
 				deleteSubscriber.errCh <- nil
 			}
 		}
@@ -104,7 +109,7 @@ func (box *Box) Publish(data []byte) error {
 
 func (box *Box) Subscribe(subscriberID string) (SubscriberCh, error) {
 	var (
-		subscriberCh = make(SubscriberCh)
+		subscriberCh = make(SubscriberCh, 100)
 		errCh        = make(chan error)
 	)
 	defer close(errCh)
@@ -135,10 +140,5 @@ func (box *Box) StopSubscription(subscriberID string) error {
 
 		errCh: errCh,
 	}
-	err := <-errCh
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return <-errCh
 }

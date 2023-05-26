@@ -131,6 +131,8 @@ func (lakeService *LakeService) Subscribe(req *pb.SubscribeReq, stream pb.Lake_S
 		return nil
 	}
 
+	lakeService.logger.Debug().Str("subscriber-id", subscriberID).Msg("registered")
+
 	// update subscriber res
 	res.SubscriberId = subscriberID
 	res.Res = &pb.SubscribeRes_Ok{Ok: true}
@@ -142,21 +144,21 @@ func (lakeService *LakeService) Subscribe(req *pb.SubscribeReq, stream pb.Lake_S
 	}
 
 	// update subscriber res
-	res.Type = pb.SubscribeResType_SUBSCRIBE_RES_TYPE_ACK
+	res.Type = pb.SubscribeResType_SUBSCRIBE_RES_TYPE_RELAY
 
 	// relay msgs to susbscriber
-	for {
-		select {
-		case data := <-subscriberCh:
-			res.Res = &pb.SubscribeRes_Data{Data: data}
-			err := stream.Send(&res)
+	for data := range subscriberCh {
+		res.Res = &pb.SubscribeRes_Data{Data: data}
+		err := stream.Send(&res)
+		if err != nil {
+			err := msgBox.StopSubscription(subscriberID)
 			if err != nil {
-				err := msgBox.StopSubscription(subscriberID)
-				if err != nil {
-					lakeService.logger.Err(err).Msg("")
-				}
+				lakeService.logger.Err(err).Msg("")
 			}
-			continue
+			break
 		}
+		continue
 	}
+
+	return nil
 }

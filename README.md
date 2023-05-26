@@ -3,8 +3,8 @@
 ## Toys
 
 - 🎓 [cloud-secrets-manager](https://github.com/h0n9/cloud-secrets-manager)
+- 🐣 [msg-lake](msg-lake/)
 - 🥚 [kistio](kistio/)
-- 🥚 [msg-lake](msg-lake/)
 - 🐣 [redis-logger](redis-logger/)
 - 🫥 [kube-restarter](kube-restarter/)
 
