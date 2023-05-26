@@ -60,9 +60,9 @@ func NewBox(ctx context.Context, logger *zerolog.Logger, topicID string, topic *
 			select {
 			case msg = <-box.subscriberCh:
 				for subscriberID, subscriberCh := range box.subscribers {
-					subLogger.Info().Str("subscriber-id", subscriberID).Msg("relaying")
+					subLogger.Debug().Str("subscriber-id", subscriberID).Msg("relaying")
 					subscriberCh <- msg
-					subLogger.Info().Str("subscriber-id", subscriberID).Msg("relayed")
+					subLogger.Debug().Str("subscriber-id", subscriberID).Msg("relayed")
 				}
 			case setSubscriber = <-box.setSubscriberCh:
 				_, exist := box.subscribers[setSubscriber.subscriberID]
@@ -79,9 +79,9 @@ func NewBox(ctx context.Context, logger *zerolog.Logger, topicID string, topic *
 					continue
 				}
 				close(subscriberCh)
-				subLogger.Info().Str("subscriber-id", deleteSubscriber.subscriberID).Msg("closed channel")
+				subLogger.Debug().Str("subscriber-id", deleteSubscriber.subscriberID).Msg("closed channel")
 				delete(box.subscribers, deleteSubscriber.subscriberID)
-				subLogger.Info().Str("subscriber-id", deleteSubscriber.subscriberID).Msg("deleted channel")
+				subLogger.Debug().Str("subscriber-id", deleteSubscriber.subscriberID).Msg("deleted channel")
 				deleteSubscriber.errCh <- nil
 			}
 		}
