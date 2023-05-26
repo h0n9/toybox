@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/base64"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,4 +27,17 @@ func TestGenerateRandomBase64String(t *testing.T) {
 
 	// Check if decoded length matches size
 	assert.Equal(t, size, len(decodedBytes), "decoded string length should match size")
+}
+
+func TestGetEnv(t *testing.T) {
+	assert.Equal(t, "default value", GetEnv("ENV", "default value"))
+	os.Setenv("ENV", "explicit value")
+	assert.Equal(t, "explicit value", GetEnv("ENV", "default value"))
+}
+
+func TestGetLogLevel(t *testing.T) {
+	os.Setenv("LOG_LEVEL", "info")
+	assert.Equal(t, "info", GetLogLevel())
+	os.Setenv("LOG_LEVEL", "debug")
+	assert.Equal(t, "debug", GetLogLevel())
 }

@@ -3,6 +3,7 @@ package util
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"os"
 )
 
 func CheckStrLen(target string, min, max int) bool {
@@ -17,4 +18,16 @@ func GenerateRandomBase64String(size int) string {
 		return ""
 	}
 	return base64.RawStdEncoding.EncodeToString(bytes)
+}
+
+func GetEnv(key, fallback string) string {
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		return fallback
+	}
+	return value
+}
+
+func GetLogLevel() string {
+	return GetEnv("LOG_LEVEL", "info")
 }
