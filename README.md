@@ -7,6 +7,7 @@
 - 🥚 [kistio](kistio/)
 - 🐣 [redis-logger](redis-logger/)
 - 🫥 [kube-restarter](kube-restarter/)
+- 🫥 [gc](gc/)
 
 ```
 # brief of conditions
