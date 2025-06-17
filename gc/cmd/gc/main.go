@@ -20,8 +20,8 @@ func main() {
 	// init ctx
 	ctx := context.Background()
 
-	// run and read output: `git diff`
-	cmd := exec.CommandContext(ctx, "git", "diff")
+	// run and read output: `git diff --staged`
+	cmd = exec.CommandContext(ctx, "git", "diff", "--staged", "--diff-algorithm=minimal")
 	gitDiffOutput, err := cmd.Output()
 	if err != nil {
 		panic(err)
