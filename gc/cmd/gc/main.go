@@ -20,6 +20,13 @@ func main() {
 	// init ctx
 	ctx := context.Background()
 
+	// retrieve last 3 lates commit messages
+	cmd := exec.CommandContext(ctx, "git", "log", "-3", "--pretty=format:'''\n%B\n'''\n")
+	gitLogOutput, err := cmd.Output()
+	if err != nil {
+		panic(err)
+	}
+
 	// run and read output: `git diff --staged`
 	cmd = exec.CommandContext(ctx, "git", "diff", "--staged", "--diff-algorithm=minimal")
 	gitDiffOutput, err := cmd.Output()
@@ -33,12 +40,14 @@ func main() {
 		panic(err)
 	}
 
-	// ask ai models (e.g., `ollama`) to write git commit messages with the diff
 	stream := false
+	// generate dynamic prompt
+	prompt := fmt.Sprintf(instruction, string(gitLogOutput), string(gitDiffOutput))
+
+	// ask ai models (e.g., `ollama`) to write git commit messages
 	ollamaReq := ollama.GenerateRequest{
 		Model:  "llama3.1:8b",
-		Prompt: string(gitDiffOutput),
-		System: instruction,
+		Prompt: prompt,
 		Stream: &stream,
 	}
 	err = ollamaClient.Generate(ctx, &ollamaReq, func(gr ollama.GenerateResponse) error {
