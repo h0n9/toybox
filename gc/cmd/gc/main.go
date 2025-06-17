@@ -91,8 +91,9 @@ Here's the diff:
 
 	sampleGitLogOutput = `feat: Add user authentication with JWT
 
-This commit introduces a new user authentication system using JSON Web Tokens.
-It includes the necessary API endpoints, token generation logic, and validation middleware.
+- introduces a new user authentication system using JSON Web Tokens
+- includes the necessary API endpoints, token generation logic, and validation
+middleware
 		`
 )
 
