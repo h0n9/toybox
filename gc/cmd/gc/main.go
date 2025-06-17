@@ -9,11 +9,58 @@ import (
 )
 
 const (
-	instruction = `Generate a concise and descriptive Git commit message based
-	on the following changes: [Paste your diff here]. The changes are related to
-	a new feature. Follow the 50/72 rule, use Conventional Commits format, and
-	include a brief explanation of the changes in the body. Start with a clear,
-	concise subject line.`
+	instruction = `
+Generate a git commit message following this structure:
+1. First line: conventional commit format under 50 characters (type: concise
+description) (remember to use semantic types like feat, fix, docs, style,
+refactor, perf, test, chore, etc.)
+2. Optional bullet points under 72 characters for each line if more context
+helps:
+   - Keep the second line blank
+   - Keep them short and direct
+   - Focus on what changed
+   - Always be terse
+   - Don't overly explain
+   - Drop any fluffy or formal language
+
+Keep in mind that you should not repeat the same message but should write the
+ones based on the +/- of codes. Also, the first line message should be brief but
+should contain what changed.
+
+Return ONLY the commit message - no introduction, no explanation, no quotes
+around it.
+
+Examples:
+'''
+feat: Add user auth system
+
+- Add JWT tokens for API auth
+- Handle token refresh for long sessions
+'''
+
+'''
+fix: Resolve memory leak in worker pool
+
+- Clean up idle connections
+- Add timeout for stale workers
+'''
+
+Simple change example:
+'''
+fix: Typo in README.md
+'''
+
+Very important: Do not respond with any of the examples. Your message must be
+based off the diff that is about to be provided, with a little bit of styling
+informed by the recent commits you're about to see.
+
+Recent commits from this repo (for style reference):
+%s
+
+Here's the diff:
+
+%s
+`
 )
 
 func main() {
