@@ -25,8 +25,9 @@ helps:
    - Drop any fluffy or formal language
 
 Keep in mind that you should not repeat the same message but should write the
-ones based on the +/- of codes. Also, the first line message should be brief but
-should contain what changed.
+ones based on the the lines of changes prefixed with '+' or '-' characters, with
+the context of given diff value. Also, the first line message should be brief
+but should contain what changed.
 
 Return ONLY the commit message - no introduction, no explanation, no quotes
 around it.
