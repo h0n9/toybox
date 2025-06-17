@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 
 	ollama "github.com/ollama/ollama/api"
@@ -86,6 +87,10 @@ func main() {
 	gitDiffOutput, err := cmd.Output()
 	if err != nil {
 		panic(err)
+	}
+	if len(gitDiffOutput) == 0 {
+		fmt.Println("gc: found nothing to commit")
+		os.Exit(0)
 	}
 
 	// init ollamaClient
