@@ -33,17 +33,42 @@ around it.
 
 Examples:
 '''
-feat: Add user auth system
+feat: Add user authentication with JWT
 
-- Add JWT tokens for API auth
-- Handle token refresh for long sessions
+- introduces a new user authentication system using JSON Web Tokens
+- includes the necessary API endpoints, token generation logic, and validation
+middleware
 '''
 
 '''
-fix: Resolve memory leak in worker pool
+fix: Resolve null pointer exception in user profile page
 
-- Clean up idle connections
-- Add timeout for stale workers
+- the user profile page was crashing due to a null pointer exception when
+accessing user data
+- adds a check for null values before accessing user data, preventing the crash
+'''
+
+'''
+refactor: Improve code structure in data processing module
+
+- the data processing module has been refactored to improve readability and
+maintainability
+- unnecessary dependencies have been removed, and the code is now organized into
+smaller, more manageable functions
+'''
+
+'''
+docs: Update API documentation for v2 endpoints
+
+- updates API documentation to reflect the changes in the v2 endpoints
+- includes updated descriptions, parameters, and response codes
+'''
+
+'''
+build: Upgrade Node.js to version 18
+
+- upgrades the project's Node.js version to 18
+- resolves some compatibility issues with newer libraries
 '''
 
 Simple change example:
