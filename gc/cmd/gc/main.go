@@ -132,7 +132,7 @@ func main() {
 
 	// ask ai models (e.g., `ollama`) to write git commit messages
 	ollamaReq := ollama.GenerateRequest{
-		Model:  "llama3.1:8b",
+		Model:  "gemma3:4b",
 		Prompt: prompt,
 		Stream: &stream,
 	}
