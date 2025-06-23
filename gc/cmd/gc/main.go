@@ -109,8 +109,8 @@ func main() {
 		gitLogOutput = []byte(sampleGitLogOutput)
 	}
 
-	// run and read output: `git diff --staged`
-	cmd = exec.CommandContext(ctx, "git", "diff", "--staged", "--diff-algorithm=minimal")
+	// retrieve staged git commits using minimal algorithm within 1000 lines
+	cmd = exec.CommandContext(ctx, "git", "diff", "--staged", "--diff-algorithm=minimal", "--unified=1000")
 	gitDiffOutput, err := cmd.Output()
 	if err != nil {
 		panic(err)
